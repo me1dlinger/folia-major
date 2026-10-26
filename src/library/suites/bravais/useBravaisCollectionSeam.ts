@@ -42,10 +42,12 @@ export type BravaisCollectionSeamInput = {
     setQuery: (query: string) => void;
     sort: {
         supported: boolean;
-        field: LocalSongFolderSortField;
-        direction: LocalSongFolderSortDirection;
-        setField: (field: LocalSongFolderSortField) => void;
-        setDirection: (direction: LocalSongFolderSortDirection) => void;
+        field: string;
+        direction: 'asc' | 'desc';
+        /** 可选的排序字段（本地文件夹是本地字段，Navidrome / 在线集合是通用曲目字段）。 */
+        fields: readonly { value: string; label: string }[];
+        setField: (field: string) => void;
+        setDirection: (direction: 'asc' | 'desc') => void;
     };
     trackByKey: ReadonlyMap<string, SongResult>;
     forms: Forms;
@@ -266,14 +268,10 @@ export const useBravaisCollectionSeam = (input: BravaisCollectionSeamInput) => {
         listCrumb: t('libraryBravaisCollection.listCrumb'),
         sort: sortInput.supported && declares('sort') ? {
             field: sortInput.field,
-            fields: [
-                { value: 'fileName', label: t('localMusic.sortByFileName') },
-                { value: 'fileLastModified', label: t('localMusic.sortByModifiedDate') },
-                { value: 'albumTrack', label: t('localMusic.sortByAlbumTrack') },
-            ],
+            fields: sortInput.fields,
             direction: sortInput.direction,
             directionLabel: sortInput.direction === 'asc' ? t('localMusic.sortAscending') : t('localMusic.sortDescending'),
-            setField: field => latest.current.sort.setField(field as LocalSongFolderSortField),
+            setField: field => latest.current.sort.setField(field),
             toggleDirection: () => latest.current.sort.setDirection(latest.current.sort.direction === 'asc' ? 'desc' : 'asc'),
         } : undefined,
         menuFor: key => {

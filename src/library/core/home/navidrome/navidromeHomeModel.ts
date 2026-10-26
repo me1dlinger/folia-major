@@ -9,19 +9,34 @@ import { createCoverPlaceholder, pickRandomSongCoverUrl } from '../../../../util
 // 「随机」「收藏」，现在带 isVirtual）、打开卡片时的集合类型、刷新动作。封面 URL 要带服务器鉴权参数，由调用方
 // 注入（navidromeApi.getCoverArtUrl 绑好配置）；虚拟歌单的封面从歌曲里随机挑一张（与原先一样每次组装都重挑）。
 
-export type NavidromeHomeSection = 'albums' | 'recently-added' | 'recently-played' | 'playlists' | 'artists';
+export type NavidromeHomeSection = 'songs' | 'albums' | 'recently-added' | 'recently-played' | 'most-played' | 'playlists' | 'artists';
 
 export const NAVIDROME_RANDOM_PLAYLIST_ID = '__navi_random__';
 export const NAVIDROME_FAVORITES_PLAYLIST_ID = '__navi_favorites__';
+/** 「曲目」菜单打开的全部曲目集合的虚拟 id。 */
+export const NAVIDROME_ALL_SONGS_ID = '__navi_all_songs__';
 
 /** section 的顺序与文案 key。 */
 export const NAVIDROME_HOME_SECTIONS: readonly { key: NavidromeHomeSection; labelKey: string }[] = [
+    { key: 'songs', labelKey: 'navidrome.tracks' },
     { key: 'albums', labelKey: 'navidrome.albums' },
     { key: 'recently-added', labelKey: 'navidrome.recentlyAdded' },
     { key: 'recently-played', labelKey: 'navidrome.recents' },
+    { key: 'most-played', labelKey: 'navidrome.mostPlayed' },
     { key: 'playlists', labelKey: 'home.playlists' },
     { key: 'artists', labelKey: 'navidrome.artists' },
 ];
+
+/**
+ * 「曲目」section 打开的是「曲目列表」而不是卡片墙：点它直接进集合视图，按歌曲列表渲染，带排序与一键播放全部。
+ * 其余 section（含最近加入 / 最近播放 / 最多播放）仍是专辑卡墙——Subsonic 只有专辑级的 newest / recent / frequent。
+ */
+export const isNavidromeTrackListSection = (section: NavidromeHomeSection): boolean => section === 'songs';
+
+/** 「曲目」入口那张虚拟卡的 id。 */
+export const navidromeTrackListCardId = (section: NavidromeHomeSection): string => (
+    section === 'songs' ? NAVIDROME_ALL_SONGS_ID : `${section}`
+);
 
 export const DEFAULT_NAVIDROME_HOME_SECTION: NavidromeHomeSection = 'albums';
 
@@ -39,7 +54,9 @@ export const navidromeSectionEmptyKey = (section: NavidromeHomeSection): string 
         ? 'navidrome.noPlaylistsFound'
         : section === 'artists'
             ? 'navidrome.noArtistsFound'
-            : 'navidrome.noAlbumsFound'
+            : section === 'songs'
+                ? 'navidrome.noSongsFound'
+                : 'navidrome.noAlbumsFound'
 );
 
 /** Navidrome 封面 id → URL（navidromeApi.getCoverArtUrl 绑好当前配置）。 */
@@ -112,6 +129,18 @@ export const buildNavidromeArtistCards = (
     trackCount: artist.albumCount,
 }));
 
+/** 「曲目」入口的那张虚拟卡：点它直接进全部曲目列表。 */
+export const buildNavidromeTrackListCard = (
+    section: NavidromeHomeSection,
+    { t }: { t: TFunction },
+): LibraryHomeCard => ({
+    id: navidromeTrackListCardId(section),
+    name: t('navidrome.allSongs') || 'All Songs',
+    type: 'playlist',
+    description: t(navidromeSectionLabelKey(section)),
+    isVirtual: true,
+});
+
 /** 某个 section 的卡片。 */
 export const buildNavidromeSectionCards = (
     section: NavidromeHomeSection,
@@ -119,21 +148,26 @@ export const buildNavidromeSectionCards = (
     deps: { t: TFunction; coverArtUrl: NavidromeCoverArtUrl },
 ): LibraryHomeCard[] => {
     switch (section) {
+        // 「曲目」不在墙上放卡：它是「点一下直接进曲目列表」的入口，
+        // 首页的墙是无限平铺的，放一张占位卡会被铺满整面墙。
+        case 'songs': return [];
         case 'albums': return buildNavidromeAlbumCards(data.albums, deps.coverArtUrl);
         case 'recently-added': return buildNavidromeAlbumCards(data.recentlyAddedAlbums, deps.coverArtUrl);
         case 'recently-played': return buildNavidromeAlbumCards(data.recentlyPlayedAlbums, deps.coverArtUrl);
+        case 'most-played': return buildNavidromeAlbumCards(data.mostPlayedAlbums, deps.coverArtUrl);
         case 'playlists': return buildNavidromePlaylistCards(data, deps);
         case 'artists': return buildNavidromeArtistCards(data.artists, deps);
     }
     return [];
 };
 
-/** 打开卡片时的集合类型：三个专辑 section 是 album，歌手是 artist，歌单里两个虚拟歌单各有类型。 */
+/** 打开卡片时的集合类型：「曲目」是曲目集合，专辑类 section 是 album，歌手是 artist，歌单里两个虚拟歌单各有类型。 */
 export const resolveNavidromeCollectionType = (
     section: NavidromeHomeSection,
     cardId: string | number,
 ): NavidromeGridViewCollectionType => {
-    if (section === 'albums' || section === 'recently-added' || section === 'recently-played') return 'album';
+    if (section === 'songs') return 'songs';
+    if (section === 'albums' || section === 'recently-added' || section === 'recently-played' || section === 'most-played') return 'album';
     if (section === 'artists') return 'artist';
     if (cardId === NAVIDROME_RANDOM_PLAYLIST_ID) return 'random';
     if (cardId === NAVIDROME_FAVORITES_PLAYLIST_ID) return 'favorites';
@@ -153,6 +187,7 @@ export const EMPTY_NAVIDROME_HOME_DATA: LibraryNavidromeHomeData = Object.freeze
     albums: [],
     recentlyAddedAlbums: [],
     recentlyPlayedAlbums: [],
+    mostPlayedAlbums: [],
     playlists: [],
     artists: [],
     randomSongs: [],

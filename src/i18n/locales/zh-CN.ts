@@ -3875,9 +3875,12 @@ export default {
     "albums": "专辑",
     "artists": "艺术家",
     "songs": "歌曲",
+    "tracks": "曲目",
+    "allSongs": "全部歌曲",
     "recents": "最近播放",
     "allAlbums": "全部",
     "recentlyAdded": "最近加入",
+    "mostPlayed": "最多播放",
     "noAlbumsFound": "未找到专辑",
     "noPlaylistsFound": "未找到歌单",
     "noArtistsFound": "未找到艺术家",
@@ -5428,5 +5431,20 @@ export default {
         "noMatch": "左下角的「不使用在线数据」让这首歌只用文件自己的信息。"
       }
     }
+  },
+  "trackSort": {
+    "title": "排序",
+    "ascending": "升序",
+    "descending": "降序",
+    "fieldName": "标题",
+    "fieldArtist": "艺术家",
+    "fieldAlbum": "专辑",
+    "fieldDuration": "时长",
+    "fieldAddedAt": "添加时间",
+    "fieldLastPlayed": "最近播放",
+    "fieldYear": "年份",
+    "fieldPlayCount": "播放次数",
+    "fieldFavorite": "收藏",
+    "shufflePlayAll": "随机播放全部"
   }
 } as const;

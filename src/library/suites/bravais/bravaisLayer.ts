@@ -77,6 +77,8 @@ export type BravaisSeamModel = {
     onSelectTab?: (key: string) => void;
     /** 播放 / 加入当前范围；没声明或不可用时不给。 */
     onPlayScope?: () => void;
+    /** 长按「播放全部」：当前范围打乱顺序后播放。不给时长按等同于点击。 */
+    onShuffleScope?: () => void;
     onEnqueueScope?: () => void;
     /**
      * 这面墙的「当前页过滤」输入位（设计稿 §7.6）：首页各页签、集合、歌手页、目录面板都有；suite 没声明过滤时不给。

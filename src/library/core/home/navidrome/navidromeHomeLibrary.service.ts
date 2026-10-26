@@ -18,7 +18,7 @@ export const NAVIDROME_RANDOM_SONG_COUNT = 100;
 
 export type NavidromeHomeLibraryDeps = {
     getConfig(): NavidromeConfig | null;
-    getAlbumList2(config: NavidromeConfig, type: 'alphabeticalByName' | 'newest' | 'recent', size: number, offset?: number): Promise<SubsonicAlbum[]>;
+    getAlbumList2(config: NavidromeConfig, type: 'alphabeticalByName' | 'newest' | 'recent' | 'frequent' | 'random', size: number, offset?: number): Promise<SubsonicAlbum[]>;
     getPlaylists(config: NavidromeConfig): Promise<SubsonicPlaylist[]>;
     getArtists(config: NavidromeConfig): Promise<SubsonicArtist[]>;
     getRandomSongs(config: NavidromeConfig, size: number): Promise<SubsonicSong[]>;
@@ -88,6 +88,7 @@ export const createNavidromeHomeLibrary = (deps: NavidromeHomeLibraryDeps): Libr
             const [
                 recentlyAddedAlbums,
                 recentlyPlayedAlbums,
+                mostPlayedAlbums,
                 playlists,
                 artists,
                 randomSongs,
@@ -95,6 +96,7 @@ export const createNavidromeHomeLibrary = (deps: NavidromeHomeLibraryDeps): Libr
             ] = await Promise.all([
                 deps.getAlbumList2(config, 'newest', NAVIDROME_RECENT_ALBUM_LIMIT),
                 deps.getAlbumList2(config, 'recent', NAVIDROME_RECENT_ALBUM_LIMIT),
+                deps.getAlbumList2(config, 'frequent', NAVIDROME_RECENT_ALBUM_LIMIT),
                 deps.getPlaylists(config),
                 deps.getArtists(config),
                 deps.getRandomSongs(config, NAVIDROME_RANDOM_SONG_COUNT),
@@ -104,7 +106,7 @@ export const createNavidromeHomeLibrary = (deps: NavidromeHomeLibraryDeps): Libr
             commit({
                 config,
                 isLoading: false,
-                data: { albums, recentlyAddedAlbums, recentlyPlayedAlbums, playlists, artists, randomSongs, favoriteSongs },
+                data: { albums, recentlyAddedAlbums, recentlyPlayedAlbums, mostPlayedAlbums, playlists, artists, randomSongs, favoriteSongs },
             });
         } catch (error) {
             if (!isCurrent()) return;

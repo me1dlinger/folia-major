@@ -73,6 +73,8 @@ export interface SubsonicSong {
     playCount?: number;
     discNumber?: number;
     created: string;
+    /** 最近一次播放时间（OpenSubsonic）。 */
+    played?: string;
     albumId: string;
     artistId: string;
     type: 'music' | 'podcast' | 'audiobook';
@@ -332,6 +334,16 @@ export interface NavidromeSong extends SongResult {
         bitRate?: number;
         suffix: string;
         starred?: string;
+        /** 入库/加入时间（Subsonic 的 created），按「最近加入」排序要用。 */
+        created?: string;
+        /** 最近一次播放时间（Subsonic 的 played）。 */
+        played?: string;
+        /** 播放次数（Subsonic 的 playCount）。 */
+        playCount?: number;
+        /** 专辑/文件年份。 */
+        year?: number;
+        /** 流派。 */
+        genre?: string;
         replayGain?: SubsonicSong['replayGain'];
     };
     // For lyrics matching (similar to local songs)

@@ -17,7 +17,7 @@ import type { LibraryDeclaredActions, LibraryHomeActionId } from '../../core/sui
 import type { LibraryAccountController } from '../../core/account/account.contract';
 import { isPersonalFmCard } from '../../core/home/homeCards';
 import { resolveLocalHomeActions, type LocalHomeRow } from '../../core/home/localHomeModel';
-import { isNavidromeHomeSection, resolveNavidromeCollectionType } from '../../core/home/navidrome/navidromeHomeModel';
+import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeTrackListSection, resolveNavidromeCollectionType } from '../../core/home/navidrome/navidromeHomeModel';
 import type { LibraryHomeOnlineList } from '../../core/home/online/useLibraryHomeOnline';
 import { useLibraryHomeLocal, useLocalDirectoryTrees, useLocalHomeBatchConfig } from '../../core/home/useLibraryHomeLocal';
 import { useLibraryHomeNavidrome } from '../../core/home/navidrome/useLibraryHomeNavidrome';
@@ -294,8 +294,16 @@ export const BravaisHomeNavidrome: React.FC<BravaisHomeSourceCommonProps & {
     latest.current = { navidrome, homeActions, onOpenGridView };
     const sections = useMemo(() => navidrome.sections.map(entry => ({ key: entry.key, label: entry.label, active: entry.active })), [navidrome.sections]);
     const onSelectSection = useMemo(() => (key: string) => {
-        if (isNavidromeHomeSection(key)) latest.current.navidrome.setSection(key);
-    }, []);
+        if (!isNavidromeHomeSection(key)) return;
+        // 曲目列表 section 只作为入口：点一下直接进曲目列表，不在墙上停留。
+        if (isNavidromeTrackListSection(key)) {
+            const { homeActions: actionsController, onOpenGridView: open } = latest.current;
+            const card = buildNavidromeTrackListCard(key, { t });
+            actionsController.openNavidromeCard(card, resolveNavidromeCollectionType(key, card.id), open);
+            return;
+        }
+        latest.current.navidrome.setSection(key);
+    }, [t]);
     const refresh = actions[0];
     const refreshLabel = refresh ? t(refresh.labelKey) || refresh.fallbackLabel || '' : null;
     const hasConfig = Boolean(config);

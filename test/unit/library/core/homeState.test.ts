@@ -101,9 +101,14 @@ describe('useNavidromeHomeSectionStore', () => {
     it('ignores an unknown stored value and rereads storage on hydrate', async () => {
         const { useNavidromeHomeSectionStore, storage } = await loadStore('bogus');
         expect(useNavidromeHomeSectionStore.getState().section).toBe('albums');
+        // 普通 section 照旧恢复。
         storage.set(KEY, 'recently-added');
         useNavidromeHomeSectionStore.getState().hydrate();
         expect(useNavidromeHomeSectionStore.getState().section).toBe('recently-added');
+        // 「曲目」是入口、不在墙上停留，不恢复为停留 section。
+        storage.set(KEY, 'songs');
+        useNavidromeHomeSectionStore.getState().hydrate();
+        expect(useNavidromeHomeSectionStore.getState().section).toBe('albums');
     });
 });
 

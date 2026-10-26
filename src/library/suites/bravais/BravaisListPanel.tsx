@@ -7,6 +7,7 @@ import { BravaisSeamStatusLine } from './BravaisSeamCollection';
 import BravaisSeamFilterField from './BravaisSeamFilterField';
 import { setBravaisLinkedKey, useBravaisUiStore } from './bravaisUiStore';
 import BravaisSeamCrumbs from './BravaisSeamCrumbs';
+import { LongPressButton } from '../../../components/shared/LongPressButton';
 
 // src/library/suites/bravais/BravaisListPanel.tsx
 // 列表面板（设计稿 §5「面板」「歌曲列表」）：缝加宽到 min(420, 视口 − 52)，标题横排压在顶部，下面是工具行（本地文件夹的
@@ -141,9 +142,17 @@ const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: 
             </div>
             <div className="bravais-seam-actions">
                 {seam.onPlayScope && (
-                    <button type="button" className="bravais-chrome-button is-primary" data-bravais-seam-action="play-scope" onClick={seam.onPlayScope}>
+                    <LongPressButton
+                        className="bravais-chrome-button is-primary"
+                        data-bravais-seam-action="play-scope"
+                        onClick={seam.onPlayScope}
+                        onLongPress={seam.onShuffleScope}
+                        title={seam.onShuffleScope
+                            ? `${seam.scopeLabels?.play ?? t('libraryBravais.playAll')} / ${t('trackSort.shufflePlayAll')}`
+                            : undefined}
+                    >
                         <Play aria-hidden />{seam.scopeLabels?.play ?? t('libraryBravais.playAll')}
-                    </button>
+                    </LongPressButton>
                 )}
                 {seam.onEnqueueScope && (
                     <button type="button" className="bravais-chrome-button" data-bravais-seam-action="enqueue-scope" onClick={seam.onEnqueueScope}>

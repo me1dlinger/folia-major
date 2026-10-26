@@ -696,8 +696,44 @@ export const navidromeApi = {
                 bitRate: song.bitRate,
                 suffix: song.suffix,
                 starred: song.starred,
+                created: song.created,
+                played: song.played,
+                playCount: song.playCount,
+                year: song.year,
+                genre: song.genre,
                 replayGain: song.replayGain,
             },
         };
+    },
+
+    /**
+     * 全部曲目：`search3` 空查询分页读完（Navidrome 对空查询返回全部歌，与 feishin 的取法一致）。
+     * 一页不满就停；读出错就返回已经读到的，不抛。
+     */
+    getAllSongs: async (
+        config: NavidromeConfig,
+        pageSize: number = 500,
+        maxPages: number = 200
+    ): Promise<SubsonicSong[]> => {
+        const songs: SubsonicSong[] = [];
+        for (let page = 0; page < maxPages; page += 1) {
+            try {
+                const res = await fetchSubsonic<Search3Response>(config, 'search3', {
+                    query: '',
+                    artistCount: '0',
+                    albumCount: '0',
+                    songCount: pageSize.toString(),
+                    songOffset: (page * pageSize).toString(),
+                });
+                if (res['subsonic-response'].status !== 'ok') break;
+                const pageSongs = res['subsonic-response'].searchResult3?.song || [];
+                songs.push(...pageSongs);
+                if (pageSongs.length < pageSize) break;
+            } catch (e) {
+                console.error('[Navidrome] getAllSongs failed:', e);
+                break;
+            }
+        }
+        return songs;
     },
 };

@@ -4,6 +4,7 @@ import type { CollectionResource, CollectionResourceSnapshot } from '../../share
 import type { LibraryCapability } from '../../shared/capability.contract';
 import type { LibraryPlaybackPort } from '../../shared/ports.contract';
 import { resolveReloadCapability, resolveScopeCapability } from '../collectionCapabilities';
+import { shuffleTracks } from '../../../../utils/trackSorting';
 import type { CollectionView } from '../useCollectionView';
 
 // src/library/core/collection/mutations/useCollectionActions.ts
@@ -18,6 +19,8 @@ export type CollectionActions = {
     playTrackInFullList: (track: SongResult) => void;
     enqueueTrack: (track: SongResult) => void;
     playScope: () => void;
+    /** 当前范围打乱顺序后播放（长按「播放全部」）。 */
+    playScopeShuffled: () => void;
     enqueueScope: () => void;
     reload: () => void;
     resumeSync: () => void;
@@ -56,6 +59,10 @@ export const useCollectionActions = ({
         playScope: () => {
             const tracks = latest.current.view.contextTracks;
             if (tracks.length > 0) latest.current.port.playAll(tracks);
+        },
+        playScopeShuffled: () => {
+            const tracks = latest.current.view.contextTracks;
+            if (tracks.length > 0) latest.current.port.playAll(shuffleTracks(tracks));
         },
         enqueueScope: () => {
             const tracks = latest.current.view.contextTracks;

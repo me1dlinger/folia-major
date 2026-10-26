@@ -249,6 +249,8 @@ export type LibraryNavidromeHomeData = {
     albums: SubsonicAlbum[];
     recentlyAddedAlbums: SubsonicAlbum[];
     recentlyPlayedAlbums: SubsonicAlbum[];
+    /** 最多播放（Subsonic getAlbumList2 type=frequent）。 */
+    mostPlayedAlbums: SubsonicAlbum[];
     playlists: SubsonicPlaylist[];
     artists: SubsonicArtist[];
     randomSongs: SubsonicSong[];

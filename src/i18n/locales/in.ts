@@ -3875,9 +3875,12 @@ export default {
     "albums": "Album",
     "artists": "Artis",
     "songs": "Lagu",
+    "tracks": "Trek",
+    "allSongs": "Semua Lagu",
     "recents": "Baru Diputar",
     "allAlbums": "Semua",
     "recentlyAdded": "Baru Ditambahkan",
+    "mostPlayed": "Paling Sering Diputar",
     "noAlbumsFound": "Tidak ada album ditemukan",
     "noPlaylistsFound": "Tidak ada playlist ditemukan",
     "noArtistsFound": "Tidak ada artis ditemukan",
@@ -5428,5 +5431,20 @@ export default {
         "noMatch": "“Jangan gunakan metadata online” di kiri bawah membuat lagu ini hanya memakai milik berkasnya."
       }
     }
+  },
+  "trackSort": {
+    "title": "Urutkan",
+    "ascending": "Menaik",
+    "descending": "Menurun",
+    "fieldName": "Judul",
+    "fieldArtist": "Artis",
+    "fieldAlbum": "Album",
+    "fieldDuration": "Durasi",
+    "fieldAddedAt": "Tanggal Ditambahkan",
+    "fieldLastPlayed": "Terakhir Diputar",
+    "fieldYear": "Tahun",
+    "fieldPlayCount": "Jumlah Putar",
+    "fieldFavorite": "Favorit",
+    "shufflePlayAll": "Acak putar semua"
   }
 } as const;

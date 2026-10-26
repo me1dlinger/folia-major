@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DEFAULT_NAVIDROME_HOME_SECTION, isNavidromeHomeSection, type NavidromeHomeSection } from './navidromeHomeModel';
+import { DEFAULT_NAVIDROME_HOME_SECTION, isNavidromeHomeSection, isNavidromeTrackListSection, type NavidromeHomeSection } from './navidromeHomeModel';
 
 // src/library/core/home/navidrome/useNavidromeHomeSectionStore.ts
 // Navidrome 页签上次停在哪个 section（原先是 NavidromeGrid3DView 的组件状态，挂载时读一次 localStorage、
@@ -11,7 +11,8 @@ const readStoredSection = (): NavidromeHomeSection => {
     if (typeof window === 'undefined') return DEFAULT_NAVIDROME_HOME_SECTION;
     try {
         const saved = localStorage.getItem(NAVIDROME_LAST_SECTION_KEY);
-        if (isNavidromeHomeSection(saved)) return saved;
+        // 曲目列表 section 是「点一下进列表」的入口、不在墙上停留，不作为可恢复的停留 section。
+        if (isNavidromeHomeSection(saved) && !isNavidromeTrackListSection(saved)) return saved;
     } catch (e) {
         console.warn('[NavidromeGrid3DView] Failed to restore navidrome last section:', e);
     }

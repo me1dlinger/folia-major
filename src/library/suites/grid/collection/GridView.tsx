@@ -59,6 +59,10 @@ import ConfirmDialog from '../../../../components/shared/ConfirmDialog';
 import { SidePanelList, TrackListItem } from '../../../../components/shared/SidePanelList';
 import { GridListSearchButton } from '../../../../components/shared/GridListSearchButton';
 import { LocalTrackSortDirectionButton, LocalTrackSortMenu } from '../../../../components/shared/LocalTrackSortMenu';
+import { TrackSortMenu } from '../../../../components/shared/TrackSortMenu';
+import { useTrackListSortStore } from '../../../core/trackSort/useTrackListSortStore';
+import { sortTracks, shuffleTracks } from '../../../../utils/trackSorting';
+import { useLongPress } from '../../../../hooks/useLongPress';
 import { CustomSelect } from '../../../../components/shared/CustomSelect';
 import { deriveProgressiveLoadingState } from '../shared/progressiveGrid';
 import { useProgressiveItemEntrance } from '../shared/useProgressiveItemEntrance';
@@ -458,6 +462,11 @@ export const GridView: React.FC<GridViewProps> = ({
     const localTrackSortDirection = useLocalTrackSortStore(state => state.direction);
     const handleLocalTrackSortFieldChange = useLocalTrackSortStore(state => state.setField);
     const handleLocalTrackSortDirectionChange = useLocalTrackSortStore(state => state.setDirection);
+    // Navidrome / 在线集合曲目列表的排序选择（见 useTrackListSortStore），与本地那套分开。
+    const trackSortField = useTrackListSortStore(state => state.field);
+    const trackSortDirection = useTrackListSortStore(state => state.direction);
+    const handleTrackSortFieldChange = useTrackListSortStore(state => state.setField);
+    const handleTrackSortDirectionChange = useTrackListSortStore(state => state.setDirection);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editableTitle, setEditableTitle] = useState(title);
     const [isPlaylistPickerOpen, setIsPlaylistPickerOpen] = useState(false);
@@ -552,8 +561,15 @@ export const GridView: React.FC<GridViewProps> = ({
             ? { songsById: localSongsById, field: localTrackSortField, direction: localTrackSortDirection }
             : null
     ), [localSongsById, localTrackSortDirection, localTrackSortField, supportsLocalTrackSorting]);
+    // Navidrome / 在线集合的曲目列表：本地那套排序只管文件夹，这里给一份通用排序（字段 + 方向，跨越 renderer 缓存）。
+    // 排序在进 collectionView 之前做，视图的显示顺序、序号与定位索引才一致。
+    const supportsTrackListSorting = mode === 'tracks' && !supportsLocalTrackSorting && tracks.length > 0;
+    const orderedTracks = useMemo(
+        () => (supportsTrackListSorting ? sortTracks(tracks, trackSortField, trackSortDirection) : tracks),
+        [supportsTrackListSorting, tracks, trackSortField, trackSortDirection],
+    );
     const collectionView = useCollectionView({
-        tracks,
+        tracks: orderedTracks,
         committedQuery: mode === 'tracks' ? deferredSearchQuery : '',
         localSort: localSortContext,
     });
@@ -564,6 +580,22 @@ export const GridView: React.FC<GridViewProps> = ({
         contextTracks: contextActionTracks,
         occurrences: trackOccurrences,
     } = collectionView;
+    const panelTracks = displayTracks;
+    // 「播放全部」：点一下按当前列表顺序入队播放，长按随机播放（比照 feishin）。
+    const playAllFromList = useCallback(() => {
+        if (!onPlayAll || panelTracks.length === 0) return;
+        onPlayAll(panelTracks);
+    }, [onPlayAll, panelTracks]);
+    const shufflePlayAllFromList = useCallback(() => {
+        if (!onPlayAll || panelTracks.length === 0) return;
+        onPlayAll(shuffleTracks(panelTracks));
+    }, [onPlayAll, panelTracks]);
+    const playAllLongPressHandlers = useLongPress(playAllFromList, shufflePlayAllFromList);
+    // 信息面板里的「播放全部」用当前操作范围（含搜索筛选），长按同样随机。
+    const playAllPanelHandlers = useLongPress(
+        () => { if (onPlayAll && contextActionTracks.length > 0) onPlayAll(contextActionTracks); },
+        () => { if (onPlayAll && contextActionTracks.length > 0) onPlayAll(shuffleTracks(contextActionTracks)); },
+    );
 
     useEffect(() => {
         if (isDraggingRef.current || pendingFocusCommitTimeoutRef.current) return;
@@ -1997,11 +2029,7 @@ export const GridView: React.FC<GridViewProps> = ({
                                 style={{ borderTopColor: 'color-mix(in srgb, var(--text-primary) 12%, transparent)' }}
                             >
                                 <button
-                                    onClick={() => {
-                                        if (onPlayAll && contextActionTracks.length > 0) {
-                                            onPlayAll(contextActionTracks);
-                                        }
-                                    }}
+                                    {...playAllPanelHandlers}
                                     disabled={contextActionTracks.length === 0}
                                     className="w-full py-3 rounded-full font-bold text-xs transition-transform hover:scale-102 active:scale-98 flex items-center justify-center gap-1.5 shadow-md disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
                                     style={{ backgroundColor: 'var(--text-primary)', color: 'var(--bg-color)' }}
@@ -2194,7 +2222,7 @@ export const GridView: React.FC<GridViewProps> = ({
                     isOpen={showSidePanel}
                     onClose={() => setShowSidePanel(false)}
                     title={collectionName || title}
-                    items={displayTracks}
+                    items={panelTracks}
                     itemHeight={60}
                     isDaylight={isDaylight}
                     focusedIndex={listFocusedIndex}
@@ -2221,10 +2249,31 @@ export const GridView: React.FC<GridViewProps> = ({
                                     <Crosshair size={18} style={{ color: isPlayingSongHere ? theme.accentColor : undefined }} />
                                 </button>
                             )}
+                            {/* 播放全部：按当前列表顺序；长按随机播放。所有曲目列表都有。 */}
+                            {onPlayAll && panelTracks.length > 0 && (
+                                <button
+                                    type="button"
+                                    {...playAllLongPressHandlers}
+                                    data-ponder="track-list-play-all"
+                                    title={`${t('playlist.playAll')} / ${t('trackSort.shufflePlayAll')}`}
+                                    aria-label={t('playlist.playAll')}
+                                    className="p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                                >
+                                    <Play size={18} />
+                                </button>
+                            )}
                             {supportsLocalTrackSorting && (
                                 <LocalTrackSortMenu
                                     field={localTrackSortField}
                                     onFieldChange={handleLocalTrackSortFieldChange}
+                                />
+                            )}
+                            {supportsTrackListSorting && (
+                                <TrackSortMenu
+                                    field={trackSortField}
+                                    direction={trackSortDirection}
+                                    onFieldChange={handleTrackSortFieldChange}
+                                    onDirectionChange={handleTrackSortDirectionChange}
                                 />
                             )}
                         </>

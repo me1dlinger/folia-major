@@ -10,6 +10,7 @@ import { BravaisSeamSpineTitle, BravaisSeamTitleArea } from './BravaisSeamTitle'
 import BravaisSeamFilterField from './BravaisSeamFilterField';
 import { openBravaisFilter } from './useBravaisSeamFilter';
 import BravaisListPanel, { type BravaisPanelActions } from './BravaisListPanel';
+import { LongPressButton } from '../../../components/shared/LongPressButton';
 import BravaisSeamFormView from './BravaisSeamFormView';
 import BravaisSeamHome from './BravaisSeamHome';
 import BravaisSeamSearch from './BravaisSeamSearch';
@@ -112,9 +113,17 @@ const FullSeam: React.FC<{ layer: BravaisLayer; depth: number; actions: BravaisS
             {collection?.status && <BravaisSeamStatusLine status={collection.status} />}
             <div className="bravais-seam-actions is-scope">
                 {seam.onPlayScope && (
-                    <button type="button" className="bravais-chrome-button is-primary" data-bravais-seam-action="play-scope" onClick={seam.onPlayScope}>
+                    <LongPressButton
+                        className="bravais-chrome-button is-primary"
+                        data-bravais-seam-action="play-scope"
+                        onClick={seam.onPlayScope}
+                        onLongPress={seam.onShuffleScope}
+                        title={seam.onShuffleScope
+                            ? `${seam.scopeLabels?.play ?? t('libraryBravais.playAll')} / ${t('trackSort.shufflePlayAll')}`
+                            : undefined}
+                    >
                         <Play aria-hidden />{seam.scopeLabels?.play ?? t('libraryBravais.playAll')}
-                    </button>
+                    </LongPressButton>
                 )}
                 {seam.onEnqueueScope && (
                     <button type="button" className="bravais-chrome-button" data-bravais-seam-action="enqueue-scope" onClick={seam.onEnqueueScope}>
@@ -155,10 +164,14 @@ const SpineSeam: React.FC<{ layer: BravaisLayer; actions: BravaisSeamActions }> 
             )}
             <div className="bravais-seam-spacer" />
             {seam.onPlayScope && (
-                <button type="button" className="bravais-seam-icon" data-bravais-seam-action="play-scope" onClick={seam.onPlayScope}
-                    aria-label={seam.scopeLabels?.play ?? t('libraryBravais.playAll')} title={seam.scopeLabels?.play ?? t('libraryBravais.playAll')}>
+                <LongPressButton className="bravais-seam-icon" data-bravais-seam-action="play-scope"
+                    onClick={seam.onPlayScope} onLongPress={seam.onShuffleScope}
+                    aria-label={seam.scopeLabels?.play ?? t('libraryBravais.playAll')}
+                    title={seam.onShuffleScope
+                        ? `${seam.scopeLabels?.play ?? t('libraryBravais.playAll')} / ${t('trackSort.shufflePlayAll')}`
+                        : (seam.scopeLabels?.play ?? t('libraryBravais.playAll'))}>
                     <Play aria-hidden />
-                </button>
+                </LongPressButton>
             )}
             <button type="button" className="bravais-seam-icon" data-bravais-seam-action="expand" onClick={() => actions.setLevel('full')}
                 aria-label={t('libraryBravais.seamExpand')} title={t('libraryBravais.seamExpand')}>

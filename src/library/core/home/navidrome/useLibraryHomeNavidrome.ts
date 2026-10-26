@@ -47,7 +47,7 @@ export const useLibraryHomeNavidrome = (resource: LibraryNavidromeHomeResource):
 
     // 五个 section 的卡片一起组装、只随数据变（与原先各自 memo 一样）：切 section 不重挑虚拟歌单的随机封面。
     const cardsBySection = useMemo(() => {
-        const cards = { albums: [], 'recently-added': [], 'recently-played': [], playlists: [], artists: [] } as Record<NavidromeHomeSection, LibraryHomeCard[]>;
+        const cards = { songs: [], albums: [], 'recently-added': [], 'recently-played': [], 'most-played': [], playlists: [], artists: [] } as Record<NavidromeHomeSection, LibraryHomeCard[]>;
         if (!config) return cards;
         const coverArtUrl = (coverArtId: string, size?: number) => navidromeApi.getCoverArtUrl(config, coverArtId, size);
         for (const entry of NAVIDROME_HOME_SECTIONS) {

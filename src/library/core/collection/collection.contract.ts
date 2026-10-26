@@ -18,7 +18,14 @@ export type GridViewCollectionSource = 'online' | 'local' | 'navidrome';
  * 'home' 时网格的反向移形换影可以落回首页那张卡。原定义在 stores/useCollectionNavigationStore（那里仍转出）。
  */
 export type CollectionNavigationOrigin = 'home' | 'search' | 'player';
-export type NavidromeGridViewCollectionType = 'album' | 'playlist' | 'artist' | 'random' | 'favorites';
+export type NavidromeGridViewCollectionType =
+    | 'album'
+    | 'playlist'
+    | 'artist'
+    | 'random'
+    | 'favorites'
+    /** 全部曲目（「曲目」入口）：search3 空查询分页读完。 */
+    | 'songs';
 
 export interface BaseGridViewCollectionDescriptor {
     source: GridViewCollectionSource;

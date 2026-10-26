@@ -29,7 +29,11 @@ export const resolveNavidromeGridViewTracks = async (
     let subsonicSongs: SubsonicSong[] = [];
     let failed = false;
 
-    if (descriptor.type === 'album') {
+    if (descriptor.type === 'songs') {
+        const songs = await navidromeApi.getAllSongs(config);
+        failed = songs.length === 0;
+        subsonicSongs = songs;
+    } else if (descriptor.type === 'album') {
         const albumDetail = await navidromeApi.getAlbum(config, descriptor.id);
         failed = !albumDetail;
         subsonicSongs = albumDetail?.song || [];

@@ -16,7 +16,7 @@ import type {
 } from '../../core/home/homeModel.contract';
 import type { LibraryDeclaredActions, LibraryHomeActionId } from '../../core/suite/suite.contract';
 import { resolveLocalHomeActions, type LocalHomeRow } from '../../core/home/localHomeModel';
-import { isNavidromeHomeSection, resolveNavidromeCollectionType } from '../../core/home/navidrome/navidromeHomeModel';
+import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeTrackListSection, resolveNavidromeCollectionType } from '../../core/home/navidrome/navidromeHomeModel';
 import type { LibraryHomeOnlineList } from '../../core/home/online/useLibraryHomeOnline';
 import { useLibraryHomeLocal, useLocalDirectoryTrees, useLocalHomeBatchConfig } from '../../core/home/useLibraryHomeLocal';
 import { useLibraryHomeNavidrome } from '../../core/home/navidrome/useLibraryHomeNavidrome';
@@ -312,6 +312,12 @@ export const LibraryTuiNavidromeList: React.FC<LibraryTuiListCommonProps & {
         }),
         setSection: id => {
             if (!isNavidromeHomeSection(id)) return false;
+            // 曲目列表 section 只作为入口：点一下直接进曲目列表，不停留在这个 section 上。
+            if (isNavidromeTrackListSection(id)) {
+                const card = buildNavidromeTrackListCard(id, { t });
+                homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(id, card.id), onOpenGridView);
+                return true;
+            }
             setSection(id);
             return true;
         },

@@ -12,6 +12,21 @@ import { useCollectionView } from '../../core/collection/useCollectionView';
 import { useCollectionActions } from '../../core/collection/mutations/useCollectionActions';
 import { useCollectionMutationSnapshot } from '../../core/collection/mutations/useCollectionMutations';
 import { useLocalTrackSortStore } from '../../core/directory/useLocalTrackSortStore';
+import { useTrackListSortStore } from '../../core/trackSort/useTrackListSortStore';
+import { sortTracks, TRACK_SORT_FIELDS, type TrackSortField } from '../../../utils/trackSorting';
+
+// 通用曲目排序字段的文案 key（与 grid 的 TrackSortMenu 同一套）。
+const TRACK_SORT_FIELD_LABEL_KEYS: Record<TrackSortField, string> = {
+    name: 'trackSort.fieldName',
+    artist: 'trackSort.fieldArtist',
+    album: 'trackSort.fieldAlbum',
+    duration: 'trackSort.fieldDuration',
+    addedAt: 'trackSort.fieldAddedAt',
+    lastPlayed: 'trackSort.fieldLastPlayed',
+    year: 'trackSort.fieldYear',
+    playCount: 'trackSort.fieldPlayCount',
+    favorite: 'trackSort.fieldFavorite',
+};
 import { useGridSurfaceRegistration } from '../../../hooks/useGridSurfaceRegistration';
 import { canResolveSongCatalogRef } from '../../../services/onlineMusic/catalogRefs';
 import { useNavigationPageKey } from '../../../components/app/playing-song-locator/useNavigationPageKey';
@@ -69,11 +84,21 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
     const sortDirection = useLocalTrackSortStore(state => state.direction);
     const setSortField = useLocalTrackSortStore(state => state.setField);
     const setSortDirection = useLocalTrackSortStore(state => state.setDirection);
+    // Navidrome / 在线集合：本地那套只管文件夹，这里给通用曲目排序（字段 + 方向，跨越 renderer 缓存）。
+    const trackSortField = useTrackListSortStore(state => state.field);
+    const trackSortDirection = useTrackListSortStore(state => state.direction);
+    const setTrackSortField = useTrackListSortStore(state => state.setField);
+    const setTrackSortDirection = useTrackListSortStore(state => state.setDirection);
+    const supportsTrackListSorting = !supportsLocalTrackSorting && tracks.length > 0;
+    const orderedTracks = useMemo(
+        () => (supportsTrackListSorting ? sortTracks(tracks, trackSortField, trackSortDirection) : tracks),
+        [supportsTrackListSorting, tracks, trackSortField, trackSortDirection],
+    );
     const localSongsById = useMemo(() => new Map(localSongs?.map(song => [song.id, song])), [localSongs]);
     const localSort = useMemo(() => (
         supportsLocalTrackSorting ? { songsById: localSongsById, field: sortField, direction: sortDirection } : null
     ), [localSongsById, sortDirection, sortField, supportsLocalTrackSorting]);
-    const view = useCollectionView({ tracks, committedQuery: filter.committedQuery, localSort });
+    const view = useCollectionView({ tracks: orderedTracks, committedQuery: filter.committedQuery, localSort });
     const actions = useCollectionActions({ resource, snapshot, view, port: playback, collectionType: collection.type });
     const mutationSnapshot = useCollectionMutationSnapshot(mutations);
 
@@ -159,6 +184,16 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
         run: notice.run,
         describe: notice.describe,
     });
+    // 列表面板的排序字段：本地文件夹用本地字段，Navidrome / 在线集合用通用曲目字段。
+    const sortFields = useMemo(() => (
+        supportsLocalTrackSorting
+            ? [
+                { value: 'fileName', label: t('localMusic.sortByFileName') },
+                { value: 'fileLastModified', label: t('localMusic.sortByModifiedDate') },
+                { value: 'albumTrack', label: t('localMusic.sortByAlbumTrack') },
+            ]
+            : TRACK_SORT_FIELDS.map(field => ({ value: field, label: t(TRACK_SORT_FIELD_LABEL_KEYS[field]) }))
+    ), [supportsLocalTrackSorting, t]);
     const { seamCollection, filter: seamFilter, wall, entries, matchLabel } = useBravaisCollectionSeam({
         collection,
         mutations,
@@ -175,11 +210,18 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
         committedQuery: filter.committedQuery,
         setQuery: filter.setQuery,
         sort: {
-            supported: supportsLocalTrackSorting,
-            field: sortField,
-            direction: sortDirection,
-            setField: setSortField,
-            setDirection: setSortDirection,
+            supported: supportsLocalTrackSorting || supportsTrackListSorting,
+            field: supportsLocalTrackSorting ? sortField : trackSortField,
+            direction: supportsLocalTrackSorting ? sortDirection : trackSortDirection,
+            fields: sortFields,
+            setField: (value) => {
+                if (supportsLocalTrackSorting) setSortField(value as never);
+                else setTrackSortField(value as TrackSortField);
+            },
+            setDirection: (value) => {
+                if (supportsLocalTrackSorting) setSortDirection(value);
+                else setTrackSortDirection(value);
+            },
         },
         trackByKey,
         forms,
@@ -231,6 +273,7 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
             onBack: () => latest.current.onBack(),
             onDone: () => latest.current.onDone(),
             onPlayScope: () => latest.current.actions.playScope(),
+            onShuffleScope: () => latest.current.actions.playScopeShuffled(),
             onEnqueueScope: () => latest.current.actions.enqueueScope(),
             clearFilter: () => latest.current.filter.setQuery(''),
         };
@@ -269,6 +312,7 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
         // 过滤中显示「匹配 / 总数」（书脊上也是它）。
         meta: view.isFilterActive ? matchLabel : t('libraryBravais.trackCount', { count: allItems.length }),
         onPlayScope: declaresScope && scopeEnabled ? callbacks.onPlayScope : undefined,
+        onShuffleScope: declaresScope && scopeEnabled ? callbacks.onShuffleScope : undefined,
         onEnqueueScope: declaresEnqueueScope && scopeEnabled ? callbacks.onEnqueueScope : undefined,
         filter: seamFilter,
         collection: seamCollection,

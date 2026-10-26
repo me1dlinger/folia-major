@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock3, Disc3, ListMusic, Loader2, RefreshCw, Settings2, Sparkles, User } from 'lucide-react';
+import { Clock3, Disc3, ListMusic, Loader2, Music, RefreshCw, Settings2, Sparkles, TrendingUp, User } from 'lucide-react';
 import DesktopGrid3DSurface, { DesktopGrid3DAction } from './DesktopGrid3DSurface';
 import { Theme } from '../../../../types';
 import type { GridViewCollectionDescriptor } from '../../../../components/app/home/gridViewCollectionAdapters';
 import { useDebouncedFocusSync } from '../../../../hooks/useDebouncedFocusSync';
 import type { LibraryHomeActionsController, LibraryHomeCard, LibraryHomeListState, LibraryNavidromeHomeResource } from '../../../core/home/homeModel.contract';
 import type { LibraryDeclaredActions } from '../../../core/suite/suite.contract';
-import { isNavidromeHomeSection, resolveNavidromeCollectionType, type NavidromeHomeSection } from '../../../core/home/navidrome/navidromeHomeModel';
+import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeTrackListSection, resolveNavidromeCollectionType, type NavidromeHomeSection } from '../../../core/home/navidrome/navidromeHomeModel';
 import { useLibraryHomeNavidrome } from '../../../core/home/navidrome/useLibraryHomeNavidrome';
 import { useLibraryHomeListRegistration } from '../../../core/home/useLibraryHomeSurfaceRegistration';
 
@@ -17,9 +17,11 @@ import { useLibraryHomeListRegistration } from '../../../core/home/useLibraryHom
 // （core/home/navidrome/useLibraryHomeNavidrome、core/home/navidrome/navidromeHomeModel）；这里只剩图标与各 section 的焦点。
 
 const SECTION_ICONS: Record<NavidromeHomeSection, React.ReactNode> = {
+    songs: <Music size={13} />,
     albums: <Disc3 size={13} />,
     'recently-added': <Sparkles size={13} />,
     'recently-played': <Clock3 size={13} />,
+    'most-played': <TrendingUp size={13} />,
     playlists: <ListMusic size={13} />,
     artists: <User size={13} />,
 };
@@ -63,24 +65,45 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
     const [focusedArtistIndex, setFocusedArtistIndex] = useState(0);
     const [focusedRecentlyAddedIndex, setFocusedRecentlyAddedIndex] = useState(0);
     const [focusedRecentlyPlayedIndex, setFocusedRecentlyPlayedIndex] = useState(0);
+    const [focusedSongsIndex, setFocusedSongsIndex] = useState(0);
+    const [focusedMostPlayedIndex, setFocusedMostPlayedIndex] = useState(0);
     const navidrome = useLibraryHomeNavidrome(overview);
     const { config, section, setSection, isLoading } = navidrome;
 
     const focus: Record<NavidromeHomeSection, [number, (index: number) => void]> = {
+        songs: [focusedSongsIndex, setFocusedSongsIndex],
         albums: [localAlbumIndex, setLocalAlbumIndex],
         'recently-added': [focusedRecentlyAddedIndex, setFocusedRecentlyAddedIndex],
         'recently-played': [focusedRecentlyPlayedIndex, setFocusedRecentlyPlayedIndex],
+        'most-played': [focusedMostPlayedIndex, setFocusedMostPlayedIndex],
         playlists: [focusedPlaylistIndex, setFocusedPlaylistIndex],
         artists: [focusedArtistIndex, setFocusedArtistIndex],
     };
     const [focusedIndex, setFocusedIndex] = focus[section];
+
+    // 曲目列表 section（曲目 / 最近加入 / 最近播放）点一下直接进曲目列表；其余 section 只切换卡片墙。
+    const openTrackListSection = (key: NavidromeHomeSection) => {
+        const card = buildNavidromeTrackListCard(key, { t });
+        homeActions.openNavidromeCard(
+            card,
+            resolveNavidromeCollectionType(key, card.id),
+            collection => onOpenGridView?.(collection),
+        );
+    };
 
     const tabs: DesktopGrid3DAction[] = navidrome.sections.map(entry => ({
         id: entry.key,
         label: entry.label,
         icon: SECTION_ICONS[entry.key],
         active: entry.active,
-        onClick: () => setSection(entry.key),
+        onClick: () => {
+            // 曲目列表 section 只作为入口：点一下直接进曲目列表，不在墙上停留（墙是无限平铺的，放占位卡会糊满整墙）。
+            if (isNavidromeTrackListSection(entry.key)) {
+                openTrackListSection(entry.key);
+                return;
+            }
+            setSection(entry.key);
+        },
     }));
 
     const actions: DesktopGrid3DAction[] = navidrome.actions.map(action => ({

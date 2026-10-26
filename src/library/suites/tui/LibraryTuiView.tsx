@@ -18,6 +18,8 @@ import { canResolveSongCatalogRef } from '../../../services/onlineMusic/catalogR
 import { useGridCommandFilter } from '../../../hooks/useGridCommandFilter';
 import { useGridSurfaceRegistration } from '../../../hooks/useGridSurfaceRegistration';
 import { useLocalTrackSortStore } from '../../core/directory/useLocalTrackSortStore';
+import { useTrackListSortStore } from '../../core/trackSort/useTrackListSortStore';
+import { sortTracks } from '../../../utils/trackSorting';
 import { colorWithAlpha } from '../../../components/visualizer/colorMix';
 import LibraryTuiHeader from './LibraryTuiHeader';
 import LibraryTuiRow, { LIBRARY_TUI_COLUMNS, LIBRARY_TUI_ROW_HEIGHT, type LibraryTuiRowProps } from './LibraryTuiRow';
@@ -82,7 +84,16 @@ const LibraryTuiView: React.FC<LibraryCollectionSurfaceProps> = ({
         supportsLocalTrackSorting ? { songsById: localSongsById, field: sortField, direction: sortDirection } : null
     ), [localSongsById, sortDirection, sortField, supportsLocalTrackSorting]);
 
-    const view = useCollectionView({ tracks, committedQuery, localSort });
+    // Navidrome / 在线集合：本地那套只管文件夹，这里按通用曲目排序排好再进视图，顺序与网格/墙面一致。
+    const trackSortField = useTrackListSortStore(state => state.field);
+    const trackSortDirection = useTrackListSortStore(state => state.direction);
+    const supportsTrackListSorting = !supportsLocalTrackSorting && tracks.length > 0;
+    const orderedTracks = useMemo(
+        () => (supportsTrackListSorting ? sortTracks(tracks, trackSortField, trackSortDirection) : tracks),
+        [supportsTrackListSorting, tracks, trackSortField, trackSortDirection],
+    );
+
+    const view = useCollectionView({ tracks: orderedTracks, committedQuery, localSort });
     const actions = useCollectionActions({ resource, snapshot, view, port, collectionType: collection.type });
     const focus = useLibraryTuiFocus(sessionKey, view, committedQuery);
     const trackAtRow = (row: number) => {

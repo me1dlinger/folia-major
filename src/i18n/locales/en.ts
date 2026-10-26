@@ -3875,9 +3875,12 @@ export default {
     "albums": "Albums",
     "artists": "Artists",
     "songs": "Songs",
+    "tracks": "Tracks",
+    "allSongs": "All Songs",
     "recents": "Recently Played",
     "allAlbums": "All",
     "recentlyAdded": "Recently Added",
+    "mostPlayed": "Most Played",
     "noAlbumsFound": "No albums found",
     "noPlaylistsFound": "No playlists found",
     "noArtistsFound": "No artists found",
@@ -5428,5 +5431,20 @@ export default {
         "noMatch": "“Don't use online metadata” at the bottom left makes the song use only what the file has."
       }
     }
+  },
+  "trackSort": {
+    "title": "Sort",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "fieldName": "Title",
+    "fieldArtist": "Artist",
+    "fieldAlbum": "Album",
+    "fieldDuration": "Duration",
+    "fieldAddedAt": "Date Added",
+    "fieldLastPlayed": "Last Played",
+    "fieldYear": "Year",
+    "fieldPlayCount": "Play Count",
+    "fieldFavorite": "Favorite",
+    "shufflePlayAll": "Shuffle play all"
   }
 } as const;

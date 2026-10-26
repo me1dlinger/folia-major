@@ -42,14 +42,18 @@ const album = (id: string, patch: Partial<SubsonicAlbum> = {}): SubsonicAlbum =>
 const songWithCover = (id: string): SubsonicSong => ({ id, coverArt: `c-${id}` } as unknown as SubsonicSong);
 
 describe('navidrome home model', () => {
-    it('lists five sections and validates stored values', () => {
-        expect(NAVIDROME_HOME_SECTIONS.map(section => section.key)).toEqual(['albums', 'recently-added', 'recently-played', 'playlists', 'artists']);
+    it('lists the sections and validates stored values', () => {
+        expect(NAVIDROME_HOME_SECTIONS.map(section => section.key)).toEqual(['songs', 'albums', 'recently-added', 'recently-played', 'most-played', 'playlists', 'artists']);
         expect(isNavidromeHomeSection('playlists')).toBe(true);
+        expect(isNavidromeHomeSection('songs')).toBe(true);
+        expect(isNavidromeHomeSection('most-played')).toBe(true);
         expect(isNavidromeHomeSection('nope')).toBe(false);
         expect(isNavidromeHomeSection(null)).toBe(false);
         expect(navidromeSectionLabelKey('recently-played')).toBe('navidrome.recents');
-        expect(['albums', 'playlists', 'artists'].map(key => navidromeSectionEmptyKey(key as never))).toEqual([
-            'navidrome.noAlbumsFound', 'navidrome.noPlaylistsFound', 'navidrome.noArtistsFound',
+        expect(navidromeSectionLabelKey('songs')).toBe('navidrome.tracks');
+        expect(navidromeSectionLabelKey('most-played')).toBe('navidrome.mostPlayed');
+        expect(['albums', 'songs', 'playlists', 'artists'].map(key => navidromeSectionEmptyKey(key as never))).toEqual([
+            'navidrome.noAlbumsFound', 'navidrome.noSongsFound', 'navidrome.noPlaylistsFound', 'navidrome.noArtistsFound',
         ]);
     });
 
@@ -85,18 +89,23 @@ describe('navidrome home model', () => {
     });
 
     it('section cards follow the section', () => {
-        const data = { ...EMPTY_NAVIDROME_HOME_DATA, albums: [album('a')], recentlyAddedAlbums: [album('n')], recentlyPlayedAlbums: [album('r')] };
+        const data = { ...EMPTY_NAVIDROME_HOME_DATA, albums: [album('a')], recentlyAddedAlbums: [album('n')], recentlyPlayedAlbums: [album('r')], mostPlayedAlbums: [album('m')] };
         expect(buildNavidromeSectionCards('albums', data, { t, coverArtUrl }).map(card => card.id)).toEqual(['a']);
         expect(buildNavidromeSectionCards('recently-added', data, { t, coverArtUrl }).map(card => card.id)).toEqual(['n']);
         expect(buildNavidromeSectionCards('recently-played', data, { t, coverArtUrl }).map(card => card.id)).toEqual(['r']);
+        expect(buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }).map(card => card.id)).toEqual(['m']);
+        // 「曲目」是入口，不在墙上放卡（墙是无限平铺的，放占位卡会糊满整墙）。
+        expect(buildNavidromeSectionCards('songs', data, { t, coverArtUrl })).toEqual([]);
         expect(buildNavidromeSectionCards('playlists', data, { t, coverArtUrl })).toHaveLength(2);
         expect(buildNavidromeSectionCards('artists', data, { t, coverArtUrl })).toEqual([]);
     });
 
-    it('opening resolves album, artist, random, favorites and playlist types', () => {
+    it('opening resolves album, artist, track-list, random, favorites and playlist types', () => {
+        expect(resolveNavidromeCollectionType('songs', '__navi_all_songs__')).toBe('songs');
         expect(resolveNavidromeCollectionType('albums', 'x')).toBe('album');
         expect(resolveNavidromeCollectionType('recently-added', 'x')).toBe('album');
         expect(resolveNavidromeCollectionType('recently-played', 'x')).toBe('album');
+        expect(resolveNavidromeCollectionType('most-played', 'x')).toBe('album');
         expect(resolveNavidromeCollectionType('artists', 'x')).toBe('artist');
         expect(resolveNavidromeCollectionType('playlists', '__navi_random__')).toBe('random');
         expect(resolveNavidromeCollectionType('playlists', '__navi_favorites__')).toBe('favorites');
@@ -151,9 +160,11 @@ describe('createNavidromeHomeLibrary', () => {
             ['alphabeticalByName', 500, 1000],
             ['newest', 500, undefined],
             ['recent', 500, undefined],
+            ['frequent', 500, undefined],
         ]);
         expect(data.recentlyAddedAlbums.map(item => item.id)).toEqual(['newest-1']);
         expect(data.recentlyPlayedAlbums.map(item => item.id)).toEqual(['recent-1']);
+        expect(data.mostPlayedAlbums.map(item => item.id)).toEqual(['frequent-1']);
         expect(deps.getRandomSongs).toHaveBeenCalledWith(config, 100);
         expect(data.favoriteSongs.map(item => item.id)).toEqual(['f']);
     });
