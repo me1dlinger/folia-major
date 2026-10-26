@@ -105,6 +105,16 @@ const FullSeam: React.FC<{ layer: BravaisLayer; depth: number; actions: BravaisS
                 <BravaisSeamFlipText as="div" flipKey={seam.meta} className="bravais-seam-meta">{seam.meta}</BravaisSeamFlipText>
             )}
             {seam.artist && <BravaisSeamArtist artist={seam.artist} />}
+            {collection?.info && collection.info.length > 0 && (
+                <dl className="bravais-seam-info" data-bravais-seam-info>
+                    {collection.info.map(row => (
+                        <div key={row.label} className="bravais-seam-info-row">
+                            <dt>{row.label}</dt>
+                            <dd>{row.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
             {collection?.description && (
                 <BravaisSeamAbout data-bravais-seam-about="collection" text={collection.description} textAttribute="data-bravais-collection-description" />
             )}

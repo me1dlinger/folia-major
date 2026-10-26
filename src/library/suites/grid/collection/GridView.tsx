@@ -61,7 +61,7 @@ import { GridListSearchButton } from '../../../../components/shared/GridListSear
 import { LocalTrackSortDirectionButton, LocalTrackSortMenu } from '../../../../components/shared/LocalTrackSortMenu';
 import { TrackSortMenu } from '../../../../components/shared/TrackSortMenu';
 import { useTrackListSortStore } from '../../../core/trackSort/useTrackListSortStore';
-import { sortTracks, shuffleTracks } from '../../../../utils/trackSorting';
+import { sortTracks, shuffleTracks, type TrackSortField } from '../../../../utils/trackSorting';
 import { useLongPress } from '../../../../hooks/useLongPress';
 import { CustomSelect } from '../../../../components/shared/CustomSelect';
 import { deriveProgressiveLoadingState } from '../shared/progressiveGrid';
@@ -211,6 +211,30 @@ const GRID_VIEW_RENDER_BUFFER_FACTOR = 0.75;
 const GRID_VIEW_CARD_VISIBILITY_BUFFER = 96;
 const TRACK_REMOVAL_ANIMATION_MS = 460;
 const TRACK_REMOVAL_BEZIER = [0.22, 0.8, 0.24, 1] as const;
+
+/** 信息面板里「排序」那一行的字段文案（与排序菜单同一套 key）。 */
+const TRACK_SORT_FIELD_LABEL_KEYS: Record<TrackSortField, string> = {
+    name: 'trackSort.fieldName',
+    artist: 'trackSort.fieldArtist',
+    album: 'trackSort.fieldAlbum',
+    duration: 'trackSort.fieldDuration',
+    addedAt: 'trackSort.fieldAddedAt',
+    lastPlayed: 'trackSort.fieldLastPlayed',
+    year: 'trackSort.fieldYear',
+    playCount: 'trackSort.fieldPlayCount',
+    favorite: 'trackSort.fieldFavorite',
+};
+
+/** 信息面板里的总时长：不到一小时 `分:秒`，超过则 `时:分:秒`。 */
+const formatInfoDuration = (ms: number): string => {
+    const total = Math.round(ms / 1000);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    return hours > 0
+        ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        : `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
 
 const getLowResCoverUrl = (url: string): string => getSizedCoverUrl(url, 150);
 
@@ -581,6 +605,24 @@ export const GridView: React.FC<GridViewProps> = ({
         occurrences: trackOccurrences,
     } = collectionView;
     const panelTracks = displayTracks;
+    // 信息面板里那几行只读信息：总时长、来源、当前排序（曲目数上面那行已经有了）。
+    const collectionInfoRows = useMemo(() => {
+        const rows: { label: string; value: string }[] = [];
+        const totalMs = panelTracks.reduce((sum, track) => sum + (track.durationMs || 0), 0);
+        if (totalMs > 0) rows.push({ label: t('libraryBravais.infoDuration'), value: formatInfoDuration(totalMs) });
+        if (collectionSource === 'navidrome') {
+            rows.push({ label: t('libraryBravais.infoSource'), value: t('libraryBravais.sourceNavidrome') });
+        } else if (collectionSource === 'local') {
+            rows.push({ label: t('libraryBravais.infoSource'), value: t('libraryBravais.sourceLocal') });
+        }
+        if (supportsTrackListSorting) {
+            rows.push({
+                label: t('libraryBravais.infoSort'),
+                value: `${t(TRACK_SORT_FIELD_LABEL_KEYS[trackSortField])} · ${t(trackSortDirection === 'asc' ? 'trackSort.ascending' : 'trackSort.descending')}`,
+            });
+        }
+        return rows;
+    }, [collectionSource, panelTracks, supportsTrackListSorting, t, trackSortDirection, trackSortField]);
     // 「播放全部」：点一下按当前列表顺序入队播放，长按随机播放（比照 feishin）。
     const playAllFromList = useCallback(() => {
         if (!onPlayAll || panelTracks.length === 0) return;
@@ -1515,6 +1557,8 @@ export const GridView: React.FC<GridViewProps> = ({
     // or the reading failed). Declared after the effects that place the grid when it opens, so
     // that on a page opened for this the song's card is where it ends.
     const playingSongKey = usePlaybackStore(state => (state.currentSong ? getPlaybackSongKey(state.currentSong) : null));
+    // 合成集合（「全部歌曲」这类）自己没有封面，用队列第一首的顶替，见 infoPanelCoverUrl。
+    const queuedFirstSong = usePlaybackStore(state => state.playQueue?.[0] ?? null);
     const locateRequest = usePlayingSongLocatorStore(state => state.request);
     const isPlayingSongHere = useMemo(() => (
         mode === 'tracks' && playingSongKey !== null && displayTracks.some(track => getPlaybackSongKey(track) === playingSongKey)
@@ -1576,7 +1620,12 @@ export const GridView: React.FC<GridViewProps> = ({
     const displayCollection = mutationSnapshot.renamedTo && collection ? { ...collection, name: mutationSnapshot.renamedTo } : collection;
     const infoCollection = collectionDetail ? { ...displayCollection, ...collectionDetail } : displayCollection;
     const coverUrl = infoCollection?.coverUrl || '';
-    const infoPanelCoverUrl = infoCollection?.coverUrl || '';
+    // 信息面板的封面：集合自己没有封面时（「全部歌曲」这类合成集合），退一步用当前播放队列第一首的封面；
+    // 队列还空着就用列表第一首的；都没有才显示占位图标。
+    const infoPanelCoverUrl = infoCollection?.coverUrl
+        || getSongCoverUrl(queuedFirstSong)
+        || getSongCoverUrl(panelTracks[0])
+        || '';
     // 只有 tracks 模式下的合集才有切入面板，没有面板时标题不做成可点控件
     const hasCutInPanel = mode === 'tracks' && Boolean(collection);
 
@@ -1939,6 +1988,23 @@ export const GridView: React.FC<GridViewProps> = ({
                                         )}
                                         {infoCollection?.playCount !== undefined && <span> • {infoCollection.playCount} {t('playlist.plays')}</span>}
                                     </div>
+                                    {mode === 'tracks' && (collectionInfoRows.length > 0 || (!isDailyRecommendationsCollection && infoCollection?.trackCount === undefined)) && (
+                                        <div className="mt-2 space-y-1 text-[10px] opacity-45" data-grid-collection-info>
+                                            {/* 上面那行已经写过曲目数时不重复（歌单/专辑有 trackCount，全部曲目这类没有）。 */}
+                                            {!isDailyRecommendationsCollection && infoCollection?.trackCount === undefined && (
+                                                <div className="flex items-baseline justify-between gap-3">
+                                                    <span className="shrink-0">{t('libraryBravais.infoTracks')}</span>
+                                                    <span className="text-right tabular-nums" style={{ color: 'var(--text-primary)' }}>{displayTracks.length}</span>
+                                                </div>
+                                            )}
+                                            {collectionInfoRows.map(row => (
+                                                <div key={row.label} className="flex items-baseline justify-between gap-3">
+                                                    <span className="shrink-0">{row.label}</span>
+                                                    <span className="min-w-0 truncate text-right tabular-nums" style={{ color: 'var(--text-primary)' }}>{row.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     {isDailyRecommendationsCollection && (
                                         <div className="mt-3 space-y-2">
                                             <div className="flex items-center gap-2">

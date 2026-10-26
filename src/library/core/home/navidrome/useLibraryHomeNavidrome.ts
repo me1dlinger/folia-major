@@ -11,6 +11,7 @@ import {
     type NavidromeHomeSection,
 } from './navidromeHomeModel';
 import { useNavidromeHomeSectionStore } from './useNavidromeHomeSectionStore';
+import { useNavidromeUiSettingsStore } from '../../../../stores/useNavidromeUiSettingsStore';
 import { navidromeApi } from '../../../../services/navidromeService';
 
 // src/library/core/home/navidrome/useLibraryHomeNavidrome.ts
@@ -44,6 +45,17 @@ export const useLibraryHomeNavidrome = (resource: LibraryNavidromeHomeResource):
     const { config, isLoading, data } = useSyncExternalStore(resource.subscribe, resource.getSnapshot);
     const section = useNavidromeHomeSectionStore(state => state.section);
     const setSection = useNavidromeHomeSectionStore(state => state.setSection);
+    // 设置里可以隐藏二级菜单里的若干项（见 useNavidromeUiSettingsStore）。
+    const hiddenSections = useNavidromeUiSettingsStore(state => state.hiddenSections);
+    const visibleSections = useMemo(() => {
+        const hidden = new Set(hiddenSections);
+        return NAVIDROME_HOME_SECTIONS.filter(entry => !hidden.has(entry.key));
+    }, [hiddenSections]);
+    // 当前停留的 section 被隐藏了（或在设置里刚被隐藏）：落到第一个还显示着的。
+    useEffect(() => {
+        if (visibleSections.length === 0) return;
+        if (!visibleSections.some(entry => entry.key === section)) setSection(visibleSections[0].key);
+    }, [section, setSection, visibleSections]);
 
     // 五个 section 的卡片一起组装、只随数据变（与原先各自 memo 一样）：切 section 不重挑虚拟歌单的随机封面。
     const cardsBySection = useMemo(() => {
@@ -57,11 +69,11 @@ export const useLibraryHomeNavidrome = (resource: LibraryNavidromeHomeResource):
     }, [config, data, t]);
     const items = cardsBySection[section];
 
-    const sections = useMemo(() => NAVIDROME_HOME_SECTIONS.map(entry => ({
+    const sections = useMemo(() => visibleSections.map(entry => ({
         key: entry.key,
         label: t(entry.labelKey),
         active: entry.key === section,
-    })), [section, t]);
+    })), [section, t, visibleSections]);
 
     const refresh = useCallback(() => resource.load(), [resource]);
 

@@ -62,6 +62,7 @@ import { useTranslation } from 'react-i18next';
 import { usePlaybackStore } from '../../../../stores/usePlaybackStore';
 import { useAudioSettingsStore } from '../../../../stores/useAudioSettingsStore';
 import { useLibraryStore } from '../../../../stores/useLibraryStore';
+import { useNavidromeUiSettingsStore } from '../../../../stores/useNavidromeUiSettingsStore';
 import { setIsPanelOpen } from '../../../../stores/useAppViewStore';
 import { currentTime } from '../../../../stores/motionSignals';
 import { resolveLocalSongLyrics } from '../../../../utils/lyrics/localSongLyrics';
@@ -179,6 +180,10 @@ export function useLibraryPlaybackController({
     const playQueue = usePlaybackStore(state => state.playQueue);
     const starredNavidromeSongIds = useLibraryStore(state => state.starredNavidromeSongIds);
     const setStarredNavidromeSongIds = useLibraryStore(state => state.setStarredNavidromeSongIds);
+    // 「已加载」这类落歌提示可以在设置里关掉（见 useNavidromeUiSettingsStore）；用 ref 读最新值，
+    // 免得把下面一串回调的身份都挂上这个开关。
+    const hideLoadedNoticeRef = useRef(false);
+    hideLoadedNoticeRef.current = useNavidromeUiSettingsStore(state => state.hideLoadedNotice);
 
     const [localSongs, setLocalSongs] = useState<LocalSong[]>([]);
     const [localPlaylists, setLocalPlaylists] = useState<LocalPlaylist[]>([]);
@@ -753,7 +758,7 @@ export function useLibraryPlaybackController({
                 text: t('status.lyricFileIssueShifted', { title: initialMeta.unifiedSong.name }),
                 durationMs: 8000,
             });
-        } else {
+        } else if (!hideLoadedNoticeRef.current) {
             setStatusMsg({ type: 'success', text: t('status.localMusicLoaded')});
         }
         void restoreCachedThemeForSong(initialMeta.unifiedSong).catch((error) => {
@@ -1058,7 +1063,9 @@ export function useLibraryPlaybackController({
                 navigateToPlaybackView();
             }
             startLoadingToPlay();
-            setStatusMsg({ type: 'success', text: t('status.navidromeSongLoaded')});
+            if (!hideLoadedNoticeRef.current) {
+                setStatusMsg({ type: 'success', text: t('status.navidromeSongLoaded')});
+            }
             void restoreCachedThemeForSong(unifiedSong).catch((error) => {
                 console.warn('Theme load error', error);
             });

@@ -27,10 +27,22 @@ const TRACK_SORT_FIELD_LABEL_KEYS: Record<TrackSortField, string> = {
     playCount: 'trackSort.fieldPlayCount',
     favorite: 'trackSort.fieldFavorite',
 };
+
+/** 总时长：不到一小时 `分:秒`，超过则 `时:分:秒`。 */
+const formatTotalDuration = (ms: number): string => {
+    const total = Math.round(ms / 1000);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    return hours > 0
+        ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        : `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
 import { useGridSurfaceRegistration } from '../../../hooks/useGridSurfaceRegistration';
 import { canResolveSongCatalogRef } from '../../../services/onlineMusic/catalogRefs';
 import { useNavigationPageKey } from '../../../components/app/playing-song-locator/useNavigationPageKey';
 import type { BravaisItem, BravaisLayer, BravaisLayerLocate, BravaisSeamModel } from './bravaisLayer';
+import type { BravaisSeamInfoRow } from './bravaisSeamModels';
 import { collectQueuedKeys, findNowPlayingKey, projectCollectionTracks } from './bravaisProjection';
 import { describeBravaisTrack } from './describeBravaisTrack';
 import type { BravaisPlaylistScope } from './bravaisFormModel';
@@ -298,6 +310,28 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
     const scopeEnabled = actions.capabilities.scope.enabled;
     const declaresScope = declaredActions.actions.includes('play-scope');
     const declaresEnqueueScope = declaredActions.actions.includes('enqueue-scope');
+    // 完整信息条里那一小块只读信息：曲目数、总时长、来源、当前排序。
+    const infoRows = useMemo<BravaisSeamInfoRow[] | undefined>(() => {
+        const tracks = view.displayTracks;
+        if (!collection || tracks.length === 0) return undefined;
+        const rows: BravaisSeamInfoRow[] = [
+            { label: t('libraryBravais.infoTracks'), value: String(tracks.length) },
+        ];
+        const totalMs = tracks.reduce((sum, track) => sum + (track.durationMs || 0), 0);
+        if (totalMs > 0) rows.push({ label: t('libraryBravais.infoDuration'), value: formatTotalDuration(totalMs) });
+        if (collection.source === 'navidrome') {
+            rows.push({ label: t('libraryBravais.infoSource'), value: t('libraryBravais.sourceNavidrome') });
+        } else if (collection.source === 'local') {
+            rows.push({ label: t('libraryBravais.infoSource'), value: t('libraryBravais.sourceLocal') });
+        }
+        if (supportsTrackListSorting) {
+            rows.push({
+                label: t('libraryBravais.infoSort'),
+                value: `${t(TRACK_SORT_FIELD_LABEL_KEYS[trackSortField])} · ${t(trackSortDirection === 'asc' ? 'trackSort.ascending' : 'trackSort.descending')}`,
+            });
+        }
+        return rows;
+    }, [collection, supportsTrackListSorting, t, trackSortDirection, trackSortField, view.displayTracks]);
     // 专辑页的海报信息（左边的凝彩海报）：只有专辑类型的集合有，详情盖在集合描述上。
     const totalTracks = snapshot?.detail?.trackCount ?? collection.trackCount ?? allItems.length;
     const seamAlbum = useMemo(() => projectBravaisSeamAlbum({
@@ -315,9 +349,9 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
         onShuffleScope: declaresScope && scopeEnabled ? callbacks.onShuffleScope : undefined,
         onEnqueueScope: declaresEnqueueScope && scopeEnabled ? callbacks.onEnqueueScope : undefined,
         filter: seamFilter,
-        collection: seamCollection,
+        collection: infoRows ? { ...seamCollection, info: infoRows } : seamCollection,
         album: seamAlbum,
-    }), [seamAlbum, allItems.length, callbacks, declaresEnqueueScope, declaresScope, displayTitle, matchLabel, scopeEnabled, seamCollection, seamFilter, t, view.isFilterActive]);
+    }), [seamAlbum, allItems.length, callbacks, declaresEnqueueScope, declaresScope, displayTitle, infoRows, matchLabel, scopeEnabled, seamCollection, seamFilter, t, view.isFilterActive]);
 
     const layer = useMemo<BravaisLayer>(() => ({
         key: sessionKey,

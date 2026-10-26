@@ -14,6 +14,8 @@ import { omni } from '../../../../services/onlineMusic/omni';
 import { useGridViewSettingsStore } from '../../../../stores/useGridViewSettingsStore';
 import { useHomeLayoutSettingsStore } from '../../../../stores/useHomeLayoutSettingsStore';
 import { useOnlineProviderAccountStore } from '../../../../stores/useOnlineProviderAccountStore';
+import { useNavidromeUiSettingsStore } from '../../../../stores/useNavidromeUiSettingsStore';
+import { NAVIDROME_HOME_SECTIONS } from '../../../../library/core/home/navidrome/navidromeHomeModel';
 import { Button, Chips, Group, PictureChoice, Reveal, Row, Segmented, Slider, Toggle, option, type SettingsGroupDef, type SettingsOptionDef } from '../kit';
 import { BRAVAIS_WALL_OPTIONS, BravaisWallGroup } from './BravaisWallGroup';
 import { GridCardsPreview, HomeCardStylePicture } from './pictures';
@@ -28,6 +30,8 @@ import { GridCardsPreview, HomeCardStylePicture } from './pictures';
 const SUITE: SettingsGroupDef = { id: 'librarySuite', titleKey: 'options.librarySuite', available: hasLibrarySuiteChoice };
 const HOME: SettingsGroupDef = { id: 'homeScreen', titleKey: 'options.settingsHeadingHome' };
 const GRID: SettingsGroupDef = { id: 'gridViewCardSettings', titleKey: 'options.gridViewCardSettings' };
+// 媒体库界面里那几个「烦人但无害」的东西的开关：Navidrome 二级菜单、落歌提示、在线平台切换按钮。
+const LIBRARY_UI: SettingsGroupDef = { id: 'libraryUi', titleKey: 'options.settingsHeadingLibraryUi' };
 
 const O = {
     suite: option(SUITE, 'librarySuiteChoice', 'options.librarySuite'),
@@ -43,6 +47,9 @@ const O = {
     squareCard: option(GRID, 'gridViewSquareCard', 'options.gridViewSquareCard'),
     minCardScale: option(GRID, 'gridViewMinCardScale', 'options.gridViewMinCardScale'),
     minCardOpacity: option(GRID, 'gridViewMinCardOpacity', 'options.gridViewMinCardOpacity'),
+    hideLoadedNotice: option(LIBRARY_UI, 'hideNavidromeLoadedNotice', 'options.hideNavidromeLoadedNotice'),
+    hiddenSections: option(LIBRARY_UI, 'hiddenNavidromeSections', 'options.hiddenNavidromeSections'),
+    hideProviderSwitcher: option(LIBRARY_UI, 'hideOnlineProviderSwitcher', 'options.hideOnlineProviderSwitcher'),
 };
 
 export const OPTIONS: SettingsOptionDef[] = [...Object.values(O), ...BRAVAIS_WALL_OPTIONS];
@@ -81,6 +88,14 @@ const HomePage: React.FC = () => {
     })));
     // The capsule has an explore tab only where the platform in use has an explore page.
     const hasExplore = useOnlineProviderAccountStore(() => omni.getActiveCapabilities().explore === true);
+    const libraryUi = useNavidromeUiSettingsStore(useShallow(state => ({
+        hideLoadedNotice: state.hideLoadedNotice,
+        hiddenSections: state.hiddenSections,
+        hideProviderSwitcher: state.hideProviderSwitcher,
+        setHideLoadedNotice: state.handleToggleHideLoadedNotice,
+        setHideProviderSwitcher: state.handleToggleHideProviderSwitcher,
+        toggleSection: state.handleToggleHiddenSection,
+    })));
     const isDefaultFalloff = grid.minCardScale === HEX_CARD_MIN_SCALE_DEFAULT && grid.minCardOpacity === HEX_CARD_MIN_OPACITY_DEFAULT;
 
     return (
@@ -170,6 +185,26 @@ const HomePage: React.FC = () => {
                         onChange={grid.setMinCardOpacity}
                         format={percent}
                     />
+                </Row>
+            </Group>
+
+            <Group def={LIBRARY_UI}>
+                {/* 勾选 = 显示；取消勾选即隐藏那一个二级菜单。 */}
+                <Row option={O.hiddenSections} hint={t('options.hiddenNavidromeSectionsHint')} note={t('options.hiddenNavidromeSectionsDesc')}>
+                    <Chips
+                        items={NAVIDROME_HOME_SECTIONS.map(entry => ({
+                            id: entry.key,
+                            label: t(entry.labelKey),
+                            checked: !libraryUi.hiddenSections.includes(entry.key),
+                            onChange: (shown: boolean) => libraryUi.toggleSection(entry.key, !shown),
+                        }))}
+                    />
+                </Row>
+                <Row option={O.hideLoadedNotice} note={t('options.hideNavidromeLoadedNoticeDesc')}>
+                    <Toggle checked={libraryUi.hideLoadedNotice} onChange={libraryUi.setHideLoadedNotice} />
+                </Row>
+                <Row option={O.hideProviderSwitcher} note={t('options.hideOnlineProviderSwitcherDesc')}>
+                    <Toggle checked={libraryUi.hideProviderSwitcher} onChange={libraryUi.setHideProviderSwitcher} />
                 </Row>
             </Group>
         </>

@@ -12,6 +12,7 @@ import { kitMotionTokens, useKitReducedMotion } from '../modal/settings/kit/moti
 import { openLoginWindow, useLoginWindowStore } from './loginWindowStore';
 import { AccountPicture, PlatformMark } from './PlatformMark';
 import { pillProvider, pillSeenNext, rowStatus, type PillSeen } from './platformRows';
+import { useNavidromeUiSettingsStore } from '../../stores/useNavidromeUiSettingsStore';
 
 // src/components/login/SwitcherPill.tsx
 // 主页右下角的切换器：正在用的账号的头像，角上是平台的记号（没有人登录时只有记号；登录失效时记号上
@@ -36,6 +37,8 @@ const SwitcherPill: React.FC<SwitcherPillProps> = ({ account, onBackToPlayer }) 
     const baseBottomPxRef = useRef(16);
     const provider = pillProvider(providers, activeProviderId);
     const status = provider ? rowStatus(provider) : 'signed-out';
+    // 设置里可以只留「返回播放器」，把切换在线平台的入口收起来（见 useNavidromeUiSettingsStore）。
+    const hideProviderSwitcher = useNavidromeUiSettingsStore(state => state.hideProviderSwitcher);
 
     /**
      * 默认高度保留原 CSS（`bottom-4 md:bottom-6`），只有真的产生抬升量时才写内联 bottom。
@@ -114,25 +117,29 @@ const SwitcherPill: React.FC<SwitcherPillProps> = ({ account, onBackToPlayer }) 
             style={{ ...settingsTokens(isDaylight, theme), ...kitMotionTokens(reduced), '--login-edge': 'var(--st-menu)' } as React.CSSProperties}
         >
             <div className="flex items-center rounded-[26px] bg-[var(--st-menu)] p-0.5 text-[color:var(--st-t1)] shadow-lg md:p-1.5">
-                <Tooltip text={t('home.switchOnlineProvider')} className="inline-flex">
-                    <button
-                        type="button"
-                        onClick={event => openLoginWindow(provider.providerId, event.currentTarget.querySelector('[data-login-pill]'))}
-                        aria-label={t('home.switchOnlineProvider')}
-                        className="st-t-fast flex h-10 min-w-10 items-center rounded-full transition-colors hover:bg-[var(--st-fill)]"
-                    >
-                        {/* 登录窗口从这里出来，登录成功后头像飞回这里（done/LoginDone.tsx 按这个属性找它，属性的值是这里画的平台）。 */}
-                        <span data-login-pill={provider.providerId} className="inline-flex" style={landing && status === 'signed-in' ? { opacity: 0 } : undefined}>
-                            {status === 'signed-in' && provider.user
-                                ? <AccountPicture user={provider.user} size={40} providerId={provider.providerId} />
-                                : <PlatformMark providerId={provider.providerId} label={provider.shortName} size={40} ranOut={status === 'ran-out'} />}
-                        </span>
-                        <span className={`st-t-move overflow-hidden whitespace-nowrap text-xs font-semibold transition-[max-width,opacity,padding] ${showLabel ? 'max-w-[180px] pl-2.5 pr-3 opacity-100' : 'max-w-0 opacity-0'}`}>
-                            {provider.shortName || provider.displayName}
-                        </span>
-                    </button>
-                </Tooltip>
-                <span className="mx-1.5 hidden h-6 w-px bg-[var(--st-line2)] md:block" aria-hidden="true" />
+                {!hideProviderSwitcher && (
+                    <>
+                        <Tooltip text={t('home.switchOnlineProvider')} className="inline-flex">
+                            <button
+                                type="button"
+                                onClick={event => openLoginWindow(provider.providerId, event.currentTarget.querySelector('[data-login-pill]'))}
+                                aria-label={t('home.switchOnlineProvider')}
+                                className="st-t-fast flex h-10 min-w-10 items-center rounded-full transition-colors hover:bg-[var(--st-fill)]"
+                            >
+                                {/* 登录窗口从这里出来，登录成功后头像飞回这里（done/LoginDone.tsx 按这个属性找它，属性的值是这里画的平台）。 */}
+                                <span data-login-pill={provider.providerId} className="inline-flex" style={landing && status === 'signed-in' ? { opacity: 0 } : undefined}>
+                                    {status === 'signed-in' && provider.user
+                                        ? <AccountPicture user={provider.user} size={40} providerId={provider.providerId} />
+                                        : <PlatformMark providerId={provider.providerId} label={provider.shortName} size={40} ranOut={status === 'ran-out'} />}
+                                </span>
+                                <span className={`st-t-move overflow-hidden whitespace-nowrap text-xs font-semibold transition-[max-width,opacity,padding] ${showLabel ? 'max-w-[180px] pl-2.5 pr-3 opacity-100' : 'max-w-0 opacity-0'}`}>
+                                    {provider.shortName || provider.displayName}
+                                </span>
+                            </button>
+                        </Tooltip>
+                        <span className="mx-1.5 hidden h-6 w-px bg-[var(--st-line2)] md:block" aria-hidden="true" />
+                    </>
+                )}
                 <Tooltip text={t('home.backToPlayer')} className="hidden md:inline-flex">
                     <button
                         type="button"

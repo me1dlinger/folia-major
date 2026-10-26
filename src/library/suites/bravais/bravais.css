@@ -384,6 +384,29 @@
 .bravais-seam-meta { color: var(--bravais-seam-ink-soft); font-size: 12px; line-height: 1.6; }
 .bravais-seam-status { font-size: 12px; line-height: 1.6; }
 
+/* 完整信息条里的那一小块只读信息（曲目数、总时长、来源、当前排序，BravaisSeamInfoRow）：
+ * 左标签右值，值用等宽数字，右对齐；太长时省略号。 */
+.bravais-seam-info {
+    display: grid;
+    gap: 2px;
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--bravais-seam-ink-soft);
+}
+.bravais-seam-info-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.bravais-seam-info-row dt { white-space: nowrap; opacity: 0.85; }
+.bravais-seam-info-row dd {
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    color: var(--text-primary, #f7f4ee);
+    font-variant-numeric: tabular-nums;
+}
+
 /* 说明文字（歌手简介、集合描述，BravaisSeamBlurb）：收起时按 --bravais-blurb-lines 截断（默认 4 行；集合描述 6 行，
  * fb10 星标挪进按钮行后让出来的那两行给了它，见 bravaisAbout.css），点开后封顶 14em、再长在块内滚动。
  * 纵向空间不够时它和竖排标题一起让位（flex-shrink，至少留一行），所以展开不会把下面的按钮挤出缝。

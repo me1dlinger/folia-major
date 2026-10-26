@@ -93,7 +93,15 @@ export type BravaisSeamForm = {
 };
 
 /** 集合层在缝里的那一部分（首页没有）。 */
+/** 完整信息条里的一行只读信息：左标签、右值。 */
+export type BravaisSeamInfoRow = { label: string; value: string };
+
 export type BravaisSeamCollection = {
+    /**
+     * 只读信息行（曲目数、总时长、来源、当前排序……）：完整信息条里标题下方那一小块，
+     * 让展开的缝不只是标题和按钮。没有就不给、不占位。
+     */
+    info?: readonly BravaisSeamInfoRow[];
     /**
      * 集合的描述（歌单简介、专辑介绍……；core 的 resolveCollectionDescription，与网格信息面板同一份），完整信息条里
      * 标题下方、可展开（BravaisSeamBlurb）；没有就不给、不占位。
