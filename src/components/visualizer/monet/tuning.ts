@@ -1,4 +1,4 @@
-import { DEFAULT_MONET_TUNING, type MonetPortraitSource, type MonetTuning } from '../../../types';
+import { DEFAULT_MONET_TUNING, type MonetDescriptionMode, type MonetPortraitSource, type MonetTuning } from '../../../types';
 import { defineVisualizerTuning, type StoredTuningFields } from '../tuningDefinition';
 import { monetPortraitActions, type MonetPortraitActions } from './portraitUpload';
 
@@ -25,6 +25,14 @@ const portraitSource = (value: MonetPortraitSource | undefined): MonetPortraitSo
     value === 'custom' ? 'custom' : DEFAULT_MONET_TUNING.portraitSource
 );
 
+/** 胶囊怎么显示：认新的 descriptionMode，也认旧的 showDescription 布尔（false 即不显示）。 */
+const descriptionMode = (parsed: Partial<MonetTuning> & Record<string, unknown>): MonetDescriptionMode => {
+    const value = parsed.descriptionMode;
+    if (value === 'text' || value === 'dot' || value === 'auto' || value === 'off') return value;
+    if (parsed.showDescription === false) return 'off';
+    return DEFAULT_MONET_TUNING.descriptionMode;
+};
+
 /**
  * A stored tuning, or a part of one, as a whole valid tuning. What is stored under this key may
  * still hold the monet background's settings from before that background had a key of its own:
@@ -32,7 +40,7 @@ const portraitSource = (value: MonetPortraitSource | undefined): MonetPortraitSo
  */
 export const resolveStoredMonetTuning = (parsed: Partial<MonetTuning> & Record<string, unknown>): MonetTuning => ({
     keywordColoringEnabled: parsed.keywordColoringEnabled ?? DEFAULT_MONET_TUNING.keywordColoringEnabled,
-    showDescription: parsed.showDescription ?? DEFAULT_MONET_TUNING.showDescription,
+    descriptionMode: descriptionMode(parsed),
     showAudioVisualization: parsed.showAudioVisualization ?? DEFAULT_MONET_TUNING.showAudioVisualization,
     audioStyle: parsed.audioStyle === 'line' ? 'line' : DEFAULT_MONET_TUNING.audioStyle,
     fontScale: fontScale(

@@ -51,9 +51,9 @@ export default defineVisualizer({
         return (
             <>
                 <QuickControlToggle
-                    active={tuning.showDescription}
+                    active={(tuning.descriptionMode ?? 'text') !== 'off'}
                     label={t('options.monetShowDescription')}
-                    onToggle={() => onTuningChange({ showDescription: !tuning.showDescription })}
+                    onToggle={() => onTuningChange({ descriptionMode: (tuning.descriptionMode ?? 'text') === 'off' ? 'text' : 'off' })}
                 >
                     <AlignLeft size={14} />
                 </QuickControlToggle>

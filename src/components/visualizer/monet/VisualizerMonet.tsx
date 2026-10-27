@@ -197,6 +197,19 @@ const VisualizerMonet: React.FC<VisualizerMonetProps> = (props) => {
     const primaryMetaLabel = songArtist?.trim() || 'Monet';
     const secondaryMetaLabel = songAlbum?.trim() || 'Monet';
     const capsuleLabel = theme.description?.trim() || theme.name?.trim() || 'Monet';
+    // 这枚胶囊怎么显示：「text」圆点 + 文字、「dot」只留圆点、「auto」先显示几秒再自动淡出、「off」不显示。
+    // 「auto」在换歌（introKey）或描述变了时重新出现，看一会儿再收起来。
+    const descriptionMode = monetTuning.descriptionMode ?? DEFAULT_MONET_TUNING.descriptionMode;
+    const [descriptionAutoHidden, setDescriptionAutoHidden] = useState(false);
+    useEffect(() => {
+        if (descriptionMode !== 'auto') {
+            setDescriptionAutoHidden(false);
+            return undefined;
+        }
+        setDescriptionAutoHidden(false);
+        const timer = window.setTimeout(() => setDescriptionAutoHidden(true), 4000);
+        return () => window.clearTimeout(timer);
+    }, [capsuleLabel, descriptionMode, introKey]);
     // Through a blend the cover is the incoming song's from its start, fading in along the hand-off,
     // as the background does (VisualizerRenderer). An incoming song without one leaves the outgoing
     // cover up until the crossover, where the words change too.
@@ -329,7 +342,7 @@ const VisualizerMonet: React.FC<VisualizerMonetProps> = (props) => {
                                 />
                             </motion.div>
 
-                            {monetTuning.showDescription && (
+                            {descriptionMode !== 'off' && (
                                 <motion.div
                                     key={`desc-${introKey}`}
                                     initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -337,17 +350,21 @@ const VisualizerMonet: React.FC<VisualizerMonetProps> = (props) => {
                                     transition={{ duration: 1.0, ease: [0.25, 1, 0.5, 1], delay: 0.95 }}
                                     className="mt-auto pt-4"
                                 >
-                                        <div
-                                            className="inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-md"
-                                            style={{
-                                                borderColor: colorWithAlpha(theme.primaryColor, 0.16),
-                                                backgroundColor: colorWithAlpha(theme.backgroundColor, 0.18),
-                                                color: colorWithAlpha(theme.primaryColor, 0.9),
-                                            }}
-                                        >
-                                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: theme.accentColor }} />
+                                    <motion.div
+                                        animate={{ opacity: descriptionAutoHidden ? 0 : 1 }}
+                                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                                        className="inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-md"
+                                        style={{
+                                            borderColor: colorWithAlpha(theme.primaryColor, 0.16),
+                                            backgroundColor: colorWithAlpha(theme.backgroundColor, 0.18),
+                                            color: colorWithAlpha(theme.primaryColor, 0.9),
+                                        }}
+                                    >
+                                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: theme.accentColor }} />
+                                        {descriptionMode !== 'dot' && (
                                             <span className="text-xs uppercase" style={{ letterSpacing: 0 }}>{capsuleLabel}</span>
-                                        </div>
+                                        )}
+                                    </motion.div>
                                 </motion.div>
                             )}
                         </div>

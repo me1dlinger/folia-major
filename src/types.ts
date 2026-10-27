@@ -1032,9 +1032,17 @@ export interface SoraBackgroundTuning {
   blank: boolean;
 }
 
+/** 左下角「主题描述」胶囊的显示方式。 */
+export type MonetDescriptionMode = 'text' | 'dot' | 'auto' | 'off';
+
 export interface MonetTuning {
   keywordColoringEnabled: boolean;
-  showDescription: boolean;
+  /**
+   * 左下角那枚主题描述胶囊怎么显示：`text` 圆点 + 文字（原行为）、`dot` 只留圆点、
+   * `auto` 先显示几秒再自动淡出、`off` 不显示。旧版是一个 `showDescription` 布尔，
+   * 读取时映射过来（false → `off`）。
+   */
+  descriptionMode: MonetDescriptionMode;
   showAudioVisualization: boolean;
   audioStyle: MonetAudioStyle;
   fontScale: number;
@@ -1109,7 +1117,7 @@ export const DEFAULT_SORA_BACKGROUND_TUNING: SoraBackgroundTuning = {
 
 export const DEFAULT_MONET_TUNING: MonetTuning = {
   keywordColoringEnabled: true,
-  showDescription: true,
+  descriptionMode: 'text',
   showAudioVisualization: true,
   audioStyle: 'bar',
   fontScale: 1.2,

@@ -177,7 +177,7 @@ describe('Visual Settings Import and Export', () => {
         },
         monetTuning: {
             keywordColoringEnabled: false,
-            showDescription: false,
+            descriptionMode: 'off' as const,
             showAudioVisualization: false,
             audioStyle: 'line' as const,
             fontScale: 1.1,

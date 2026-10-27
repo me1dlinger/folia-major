@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ImagePlus, Trash2 } from 'lucide-react';
 import { useVisualizerAssetStore } from '../../../stores/useVisualizerAssetStore';
-import { DEFAULT_MONET_TUNING, type MonetAudioStyle, type MonetPortraitSource, type MonetTuning } from '../../../types';
+import { DEFAULT_MONET_TUNING, type MonetAudioStyle, type MonetDescriptionMode, type MonetPortraitSource, type MonetTuning } from '../../../types';
 import { Button, Group, PictureGrid, Reveal, Row, Segmented, type SettingsGroupDef } from '../../modal/settings/kit';
 import { type VisualizerSettingsPanelProps } from '../definition';
 import { SliderRow, times, ToggleRow } from '../panelRows';
@@ -57,7 +57,7 @@ export const MonetSettingsPanel: React.FC<VisualizerSettingsPanelProps<MonetTuni
     const [feedback, setFeedback] = useState<string | null>(null);
     const resolvedTuning = {
         keywordColoringEnabled: monetTuning.keywordColoringEnabled ?? DEFAULT_MONET_TUNING.keywordColoringEnabled,
-        showDescription: monetTuning.showDescription ?? DEFAULT_MONET_TUNING.showDescription,
+        descriptionMode: monetTuning.descriptionMode ?? DEFAULT_MONET_TUNING.descriptionMode,
         showAudioVisualization: monetTuning.showAudioVisualization ?? DEFAULT_MONET_TUNING.showAudioVisualization,
         audioStyle: monetTuning.audioStyle ?? DEFAULT_MONET_TUNING.audioStyle,
         fontScale: clampValue(monetTuning.fontScale ?? DEFAULT_MONET_TUNING.fontScale, 0.7, 1.5, DEFAULT_MONET_TUNING.fontScale),
@@ -102,11 +102,19 @@ export const MonetSettingsPanel: React.FC<VisualizerSettingsPanelProps<MonetTuni
                     checked={resolvedTuning.keywordColoringEnabled}
                     onChange={(value) => onMonetTuningChange?.({ keywordColoringEnabled: value })}
                 />
-                <ToggleRow
-                    label={t('options.monetShowDescription')}
-                    checked={resolvedTuning.showDescription}
-                    onChange={(value) => onMonetTuningChange?.({ showDescription: value })}
-                />
+                {/* 左下角那枚主题描述胶囊：圆点 + 文字 / 只圆点 / 自动隐藏 / 不显示。 */}
+                <Row label={t('options.monetDescription')}>
+                    <Segmented<MonetDescriptionMode>
+                        value={resolvedTuning.descriptionMode}
+                        options={[
+                            { value: 'text', label: t('options.monetDescriptionText') },
+                            { value: 'dot', label: t('options.monetDescriptionDot') },
+                            { value: 'auto', label: t('options.monetDescriptionAuto') },
+                            { value: 'off', label: t('options.monetDescriptionOff') },
+                        ]}
+                        onChange={(value) => onMonetTuningChange?.({ descriptionMode: value })}
+                    />
+                </Row>
             </Group>
 
             <Group def={PORTRAIT_GROUP}>
