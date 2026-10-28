@@ -3902,6 +3902,7 @@ export default {
     "songs": "Lagu",
     "tracks": "Trek",
     "allSongs": "Semua Lagu",
+    "viewAll": "Semua",
     "recents": "Baru Diputar",
     "allAlbums": "Semua",
     "recentlyAdded": "Baru Ditambahkan",

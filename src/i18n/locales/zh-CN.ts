@@ -3902,6 +3902,7 @@ export default {
     "songs": "歌曲",
     "tracks": "曲目",
     "allSongs": "全部歌曲",
+    "viewAll": "全部",
     "recents": "最近播放",
     "allAlbums": "全部",
     "recentlyAdded": "最近加入",

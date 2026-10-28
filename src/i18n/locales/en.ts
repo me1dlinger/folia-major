@@ -3902,6 +3902,7 @@ export default {
     "songs": "Songs",
     "tracks": "Tracks",
     "allSongs": "All Songs",
+    "viewAll": "All",
     "recents": "Recently Played",
     "allAlbums": "All",
     "recentlyAdded": "Recently Added",

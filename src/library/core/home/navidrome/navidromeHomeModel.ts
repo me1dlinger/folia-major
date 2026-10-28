@@ -161,9 +161,10 @@ export const buildNavidromeTrackListCard = (
     { t }: { t: TFunction },
 ): LibraryHomeCard => ({
     id: navidromeTrackListCardId(section),
+    // 「曲目」是全部歌曲；三个歌曲级分区里这张卡排在卡片条最左，是「全部」入口（看这个分区的完整列表）。
     name: section === 'songs'
         ? (t('navidrome.allSongs') || 'All Songs')
-        : t(navidromeSectionLabelKey(section)),
+        : (t('navidrome.viewAll') || 'All'),
     type: 'playlist',
     description: t(navidromeSectionLabelKey(section)),
     isVirtual: true,
