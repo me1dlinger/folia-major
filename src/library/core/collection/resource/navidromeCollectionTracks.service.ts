@@ -2,9 +2,10 @@ import type { SongResult } from '../../../../types';
 import type { SubsonicSong } from '../../../../types/navidrome';
 import type { NavidromeGridViewCollectionDescriptor } from '../collection.contract';
 import type { NavidromeSongListType } from '../navidromeSongLists';
+import { compareNavidromeSongListSongs, pickNavidromeSongListAlbums } from '../navidromeSongLists';
 import { getNavidromeConfig, navidromeApi } from '../../../../services/navidromeService';
 import { buildNavidromeQueue } from '../../../../services/playbackAdapters';
-import { DEFAULT_SECTION_TRACK_LIMIT, useNavidromeUiSettingsStore } from '../../../../stores/useNavidromeUiSettingsStore';
+import { readNavidromeSectionTrackLimit } from '../../../../stores/useNavidromeUiSettingsStore';
 
 // src/library/core/collection/resource/navidromeCollectionTracks.service.ts
 // Navidrome 集合的曲目：按集合类型调用对应的 Subsonic 接口，再统一转成播放用的歌曲。
@@ -16,27 +17,13 @@ export const resolveNavidromeServerScope = (): string => {
     return config ? `${config.serverUrl}|${config.username}` : '';
 };
 
-/** 「最近加入 / 最近播放 / 最多播放」摊平成曲目列表时最多取多少张专辑，避免签一长串 getAlbum 请求。 */
+/** 「最近加入 / 最近播放 / 最多播放」摊平成曲目列表时要读哪个专辑列表。 */
+export const resolveNavidromeSongListAlbumType = (type: NavidromeSongListType): 'newest' | 'recent' | 'frequent' => (
+    type === 'recently-added' ? 'newest' : type === 'recently-played' ? 'recent' : 'frequent'
+);
+
+/** 这三个集合一次向服务器要多少张专辑（摊平前先按歌曲数挑几张，见 pickNavidromeSongListAlbums）。 */
 export const NAVIDROME_RECENT_TRACK_ALBUMS = 120;
-
-const toTimestamp = (value?: string): number => {
-    if (!value) return 0;
-    const parsed = Date.parse(value);
-    return Number.isNaN(parsed) ? 0 : parsed;
-};
-
-/** 这三个集合的固定排序：入库时间 / 最近播放时间 / 播放次数，都是倒序；缺失的排最后。 */
-export const compareNavidromeSectionSongs = (type: NavidromeSongListType, left: SubsonicSong, right: SubsonicSong): number => {
-    if (type === 'recently-added') return toTimestamp(right.created) - toTimestamp(left.created);
-    if (type === 'recently-played') return toTimestamp(right.played) - toTimestamp(left.played);
-    return (right.playCount ?? 0) - (left.playCount ?? 0);
-};
-
-/** 「单曲列表最多显示」（设置里可改，默认 100、最小 1）；「曲目」（全部曲目）不受它限制。 */
-export const resolveNavidromeSectionTrackLimit = (): number => {
-    const limit = useNavidromeUiSettingsStore.getState().sectionTrackLimit;
-    return Number.isFinite(limit) && limit >= 1 ? Math.floor(limit) : DEFAULT_SECTION_TRACK_LIMIT;
-};
 
 // Loads Navidrome tracks for GridView without moving Navidrome service logic into GridView itself.
 // `failed` says that a read brought nothing back (the service answers nothing for such a read,
@@ -58,20 +45,18 @@ export const resolveNavidromeGridViewTracks = async (
         failed = songs.length === 0;
         subsonicSongs = songs;
     } else if (descriptor.type === 'recently-added' || descriptor.type === 'recently-played' || descriptor.type === 'most-played') {
-        // Subsonic 只有专辑级的 newest / recent / frequent：取最近的一批专辑，再摊平成歌曲列表。
+        // Subsonic 只有专辑级的 newest / recent / frequent：取最近的一批专辑，挑几张摊平成歌曲列表。
         const songListType: NavidromeSongListType = descriptor.type;
-        const albumType = songListType === 'recently-added'
-            ? 'newest'
-            : songListType === 'recently-played' ? 'recent' : 'frequent';
-        const albums = await navidromeApi.getAlbumList2(config, albumType, NAVIDROME_RECENT_TRACK_ALBUMS);
-        const albumResults = await Promise.all(albums.map(album => navidromeApi.getAlbum(config, album.id)));
-        failed = albums.length > 0 && albumResults.every(album => !album);
-        // 这三个分区按歌曲自己的字段固定排序（专辑级顺序只反映专辑）：最近加入＝入库时间、最近播放＝最近播放时间、
-        // 最多播放＝播放次数，都是倒序；再按设置里的「单曲列表最多显示」截断。
+        const limit = readNavidromeSectionTrackLimit();
+        const albums = await navidromeApi.getAlbumList2(config, resolveNavidromeSongListAlbumType(songListType), NAVIDROME_RECENT_TRACK_ALBUMS);
+        const wanted = pickNavidromeSongListAlbums(albums, limit);
+        const albumResults = await Promise.all(wanted.map(album => navidromeApi.getAlbum(config, album.id)));
+        failed = wanted.length > 0 && albumResults.every(album => !album);
+        // 按歌曲自己的字段固定排序（专辑级顺序只反映专辑），再按「单曲列表最多显示」截断。
         subsonicSongs = albumResults
             .flatMap(album => album?.song || [])
-            .sort((left, right) => compareNavidromeSectionSongs(songListType, left, right))
-            .slice(0, resolveNavidromeSectionTrackLimit());
+            .sort((left, right) => compareNavidromeSongListSongs(songListType, left, right))
+            .slice(0, limit);
     } else if (descriptor.type === 'album') {
         const albumDetail = await navidromeApi.getAlbum(config, descriptor.id);
         failed = !albumDetail;

@@ -22,11 +22,15 @@ vi.mock('@/services/playbackAdapters', () => ({
 
 import { navidromeApi } from '@/services/navidromeService';
 import {
-    compareNavidromeSectionSongs,
     resolveNavidromeGridViewTracks,
 } from '@/library/core/collection/resource/navidromeCollectionTracks.service';
-import { isNavidromeSongListType } from '@/library/core/collection/navidromeSongLists';
-import { DEFAULT_SECTION_TRACK_LIMIT, useNavidromeUiSettingsStore } from '@/stores/useNavidromeUiSettingsStore';
+import {
+    compareNavidromeSongListSongs,
+    isNavidromeSongListType,
+    NAVIDROME_SONG_LIST_MAX_ALBUMS,
+    pickNavidromeSongListAlbums,
+} from '@/library/core/collection/navidromeSongLists';
+import { DEFAULT_SECTION_TRACK_LIMIT, readNavidromeSectionTrackLimit, useNavidromeUiSettingsStore } from '@/stores/useNavidromeUiSettingsStore';
 
 const song = (id: string, overrides: Partial<SubsonicSong> = {}): SubsonicSong => ({
     id,
@@ -43,6 +47,7 @@ const song = (id: string, overrides: Partial<SubsonicSong> = {}): SubsonicSong =
     albumId: 'al-1',
     artistId: 'ar-1',
     type: 'music',
+    isVideo: false,
     ...overrides,
 });
 
@@ -71,15 +76,25 @@ describe('navidrome song lists', () => {
     it('orders by the fixed rule of each list, missing values last', () => {
         const older = song('older', { created: '2020-01-01T00:00:00.000Z' });
         const newer = song('newer', { created: '2024-01-01T00:00:00.000Z' });
-        expect([older, newer].sort((a, b) => compareNavidromeSectionSongs('recently-added', a, b)).map(s => s.id)).toEqual(['newer', 'older']);
+        expect([older, newer].sort((a, b) => compareNavidromeSongListSongs('recently-added', a, b)).map(s => s.id)).toEqual(['newer', 'older']);
 
         const neverPlayed = song('never');
         const playedLate = song('late', { played: '2025-01-01T00:00:00.000Z' });
-        expect([neverPlayed, playedLate].sort((a, b) => compareNavidromeSectionSongs('recently-played', a, b)).map(s => s.id)).toEqual(['late', 'never']);
+        expect([neverPlayed, playedLate].sort((a, b) => compareNavidromeSongListSongs('recently-played', a, b)).map(s => s.id)).toEqual(['late', 'never']);
 
         const few = song('few', { playCount: 1 });
         const many = song('many', { playCount: 9 });
-        expect([few, many].sort((a, b) => compareNavidromeSectionSongs('most-played', a, b)).map(s => s.id)).toEqual(['many', 'few']);
+        expect([few, many].sort((a, b) => compareNavidromeSongListSongs('most-played', a, b)).map(s => s.id)).toEqual(['many', 'few']);
+    });
+
+    it('picks only as many albums as the limit needs, up to a maximum', () => {
+        const albums = Array.from({ length: 10 }, (_, index) => ({ id: `al-${index}`, songCount: 8 }));
+        expect(pickNavidromeSongListAlbums(albums, 20).map(album => album.id)).toEqual(['al-0', 'al-1', 'al-2']);
+        expect(pickNavidromeSongListAlbums(albums, 1)).toHaveLength(1);
+        // 歌曲数缺失时不提前停，但到上限就停。
+        const unknown = Array.from({ length: NAVIDROME_SONG_LIST_MAX_ALBUMS + 10 }, (_, index) => ({ id: `x-${index}`, songCount: undefined }));
+        expect(pickNavidromeSongListAlbums(unknown, 10)).toHaveLength(NAVIDROME_SONG_LIST_MAX_ALBUMS);
+        expect(readNavidromeSectionTrackLimit()).toBe(DEFAULT_SECTION_TRACK_LIMIT);
     });
 
     it('flattens the albums of most-played, sorts by play count and cuts at the limit', async () => {

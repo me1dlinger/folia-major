@@ -24,6 +24,7 @@ const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 const navidromeDeps = (): NavidromeHomeLibraryDeps => ({
     getConfig: () => ({ serverUrl: 'http://navi', username: 'u', passwordHash: 'h' }),
     getAlbumList2: vi.fn(async () => []),
+    getAlbum: vi.fn(async () => null),
     getPlaylists: vi.fn(async () => []),
     getArtists: vi.fn(async () => []),
     getRandomSongs: vi.fn(async () => []),

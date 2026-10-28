@@ -7,6 +7,8 @@ import { translateHomeMessage } from '../core/home/homeSources';
 import { importFolder, resyncAllFolders, LOCAL_MUSIC_SCAN_PROGRESS_EVENT } from '../../services/localMusicService';
 import { getLocalLibraryAvailability } from '../../services/localLibraryAvailability';
 import { importLocalPlaylistFile } from '../../services/localPlaylistFileService';
+import { getNavidromeConfig, navidromeApi } from '../../services/navidromeService';
+import { buildNavidromeQueue } from '../../services/playbackAdapters';
 import { useOnlineProviderAccountStore } from '../../stores/useOnlineProviderAccountStore';
 import { selectProviderPersonalFm, usePersonalFmModeStore } from '../../stores/usePersonalFmModeStore';
 import { isSamePersonalFmSelection, toPersonalFmRequestOptions } from '../../services/onlineMusic/fmModes';
@@ -104,6 +106,14 @@ export const createLibraryHomePort = (getSurface: () => HomePortSurface): Librar
             return stillCurrent() ? songs : [];
         },
         playPersonalFm: (song, queue) => getSurface().onPlaySong(song, queue, true),
+        // 首页歌曲卡：这首歌先放，同一分区的歌曲列表按顺序进队列。
+        playNavidromeSongs: (songs, index) => {
+            const config = getNavidromeConfig();
+            if (!config || songs.length === 0) return;
+            const queue = buildNavidromeQueue(songs.map(song => navidromeApi.toNavidromeSong(config, song)));
+            const start = queue[Math.min(Math.max(index, 0), queue.length - 1)];
+            if (start) getSurface().onPlaySong(start, queue);
+        },
         describeOnlineCollection: (collection, providerId) => createOnlineGridViewCollection(collection, providerId),
         describeLocalGroup: group => createLocalGridViewCollection(group),
         describeNavidromeCard: (card, type) => createNavidromeGridViewCollection(card, type),

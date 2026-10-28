@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next';
-import type { SubsonicAlbum, SubsonicArtist } from '../../../../types/navidrome';
+import type { SubsonicAlbum, SubsonicArtist, SubsonicSong } from '../../../../types/navidrome';
 import type { NavidromeGridViewCollectionType } from '../../collection/collection.contract';
+import type { NavidromeSongListType } from '../../collection/navidromeSongLists';
+import { isNavidromeSongListType } from '../../collection/navidromeSongLists';
 import type { LibraryHomeCard, LibraryHomeListAction, LibraryNavidromeHomeData } from '../homeModel.contract';
 import { createCoverPlaceholder, pickRandomSongCoverUrl } from '../../../../utils/coverPlaceholders';
 
@@ -28,18 +30,36 @@ export const NAVIDROME_HOME_SECTIONS: readonly { key: NavidromeHomeSection; labe
 ];
 
 /**
- * 这个 section 打开的是「曲目列表」而不是卡片墙：点它直接进集合视图，按歌曲列表渲染，带排序与一键播放全部。
- * 「曲目」永远是；「最近加入 / 最近播放 / 最多播放」在设置里打开「按单曲列表显示」后（`asTracks`）也是——
- * Subsonic 只有专辑级的 newest / recent / frequent，打开时把最近的一批专辑摊平成歌曲。
+ * 这个 section 点一下是直接进「曲目列表」而不是切换卡片墙：只有「曲目」（全部曲目）是这样——
+ * 它没有自己的卡片墙。其余 section（含「按单曲列表显示」时的最近加入 / 最近播放 / 最多播放）都落在墙上，
+ * 卡片条里最左那张是「全部」入口卡，点它才进全屏的曲目列表。
  */
-export const isNavidromeTrackListSection = (section: NavidromeHomeSection, asTracks = false): boolean => (
-    section === 'songs' || (asTracks && (section === 'recently-added' || section === 'recently-played' || section === 'most-played'))
-);
+export const isNavidromeTrackListSection = (section: NavidromeHomeSection): boolean => section === 'songs';
 
 /** 曲目列表 section 那张虚拟卡的 id。 */
 export const navidromeTrackListCardId = (section: NavidromeHomeSection): string => (
     section === 'songs' ? NAVIDROME_ALL_SONGS_ID : `${section}`
 );
+
+/** 歌曲卡的来源标记：点它是播放这首（按 index 到当前分区的歌曲列表里拿），而不是打开集合。 */
+export type NavidromeSongCardRef = { kind: 'navidrome-song'; index: number };
+export const isNavidromeSongCardRef = (value: unknown): value is NavidromeSongCardRef => (
+    typeof value === 'object' && value !== null
+    && (value as { kind?: unknown }).kind === 'navidrome-song'
+    && typeof (value as { index?: unknown }).index === 'number'
+);
+
+/** 歌曲卡（「按单曲列表显示」的三个分区在墙上放的就是这些）。 */
+export const buildNavidromeSongCards = (
+    songs: readonly SubsonicSong[],
+    coverArtUrl: NavidromeCoverArtUrl,
+): LibraryHomeCard[] => songs.map((song, index) => ({
+    id: song.id,
+    name: song.title,
+    coverUrl: song.coverArt ? coverArtUrl(song.coverArt, 300) : createCoverPlaceholder(song.title, 'playlist'),
+    description: song.artist,
+    raw: { kind: 'navidrome-song', index } satisfies NavidromeSongCardRef,
+}));
 
 export const DEFAULT_NAVIDROME_HOME_SECTION: NavidromeHomeSection = 'albums';
 
@@ -149,15 +169,25 @@ export const buildNavidromeTrackListCard = (
     isVirtual: true,
 });
 
-/** 某个 section 的卡片。`asTracks` 时「最近加入 / 最近播放 / 最多播放」是曲目列表入口，不在墙上放卡。 */
+/**
+ * 某个 section 的卡片。`asTracks` 时「最近加入 / 最近播放 / 最多播放」放的是歌曲卡，最左先放一张「全部」入口卡
+ * （点它进这个分区自己的全屏曲目列表）；「曲目」没有卡片墙。
+ */
 export const buildNavidromeSectionCards = (
     section: NavidromeHomeSection,
     data: LibraryNavidromeHomeData,
     deps: { t: TFunction; coverArtUrl: NavidromeCoverArtUrl },
     asTracks = false,
 ): LibraryHomeCard[] => {
-    // 曲目列表入口不在墙上放卡：首页的墙是无限平铺的，放一张占位卡会被铺满整面墙。
-    if (isNavidromeTrackListSection(section, asTracks)) return [];
+    // 「曲目」是纯入口（点它直接进全部曲目），没有卡片墙。
+    if (section === 'songs') return [];
+    // 「按单曲列表显示」：歌曲卡，最左是「全部」入口卡。
+    if (asTracks && isNavidromeSongListType(section)) {
+        return [
+            buildNavidromeTrackListCard(section, deps),
+            ...buildNavidromeSongCards(data.songLists[section], deps.coverArtUrl),
+        ];
+    }
     switch (section) {
         case 'albums': return buildNavidromeAlbumCards(data.albums, deps.coverArtUrl);
         case 'recently-added': return buildNavidromeAlbumCards(data.recentlyAddedAlbums, deps.coverArtUrl);
@@ -196,6 +226,13 @@ export const resolveNavidromeHomeActions = (isLoading: boolean): LibraryHomeList
     disabled: isLoading,
 }];
 
+/** 「按单曲列表显示」的三个分区各自的歌曲（关闭时为空）。 */
+export const EMPTY_NAVIDROME_SONG_LISTS: Record<NavidromeSongListType, SubsonicSong[]> = Object.freeze({
+    'recently-added': [],
+    'recently-played': [],
+    'most-played': [],
+}) as Record<NavidromeSongListType, SubsonicSong[]>;
+
 export const EMPTY_NAVIDROME_HOME_DATA: LibraryNavidromeHomeData = Object.freeze({
     albums: [],
     recentlyAddedAlbums: [],
@@ -205,4 +242,5 @@ export const EMPTY_NAVIDROME_HOME_DATA: LibraryNavidromeHomeData = Object.freeze
     artists: [],
     randomSongs: [],
     favoriteSongs: [],
+    songLists: EMPTY_NAVIDROME_SONG_LISTS,
 }) as LibraryNavidromeHomeData;

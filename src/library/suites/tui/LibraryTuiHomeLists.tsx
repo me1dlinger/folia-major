@@ -16,7 +16,8 @@ import type {
 } from '../../core/home/homeModel.contract';
 import type { LibraryDeclaredActions, LibraryHomeActionId } from '../../core/suite/suite.contract';
 import { resolveLocalHomeActions, type LocalHomeRow } from '../../core/home/localHomeModel';
-import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeTrackListSection, resolveNavidromeCollectionType } from '../../core/home/navidrome/navidromeHomeModel';
+import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeSongCardRef, isNavidromeTrackListSection, resolveNavidromeCollectionType } from '../../core/home/navidrome/navidromeHomeModel';
+import { isNavidromeSongListType } from '../../core/collection/navidromeSongLists';
 import type { LibraryHomeOnlineList } from '../../core/home/online/useLibraryHomeOnline';
 import { useLibraryHomeLocal, useLocalDirectoryTrees, useLocalHomeBatchConfig } from '../../core/home/useLibraryHomeLocal';
 import { useLibraryHomeNavidrome } from '../../core/home/navidrome/useLibraryHomeNavidrome';
@@ -315,8 +316,8 @@ export const LibraryTuiNavidromeList: React.FC<LibraryTuiListCommonProps & {
         }),
         setSection: id => {
             if (!isNavidromeHomeSection(id)) return false;
-            // 曲目列表入口只作为入口：点一下直接进曲目列表，不停留在这个 section 上。
-            if (isNavidromeTrackListSection(id, sectionsAsTracks)) {
+            // 「曲目」（全部曲目）没有卡片墙，只作为入口：点一下直接进曲目列表。
+            if (isNavidromeTrackListSection(id)) {
                 const card = buildNavidromeTrackListCard(id, { t });
                 homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(id, card.id, sectionsAsTracks), onOpenGridView);
                 return true;
@@ -363,7 +364,14 @@ export const LibraryTuiNavidromeList: React.FC<LibraryTuiListCommonProps & {
                 items={navidrome.items}
                 isLoading={isLoading}
                 emptyMessage={navidrome.emptyMessage}
-                onOpen={card => homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(section, card.id, sectionsAsTracks), onOpenGridView)}
+                onOpen={card => {
+                    // 「按单曲列表显示」时列表里是歌曲：点它播放这首（同一分区按顺序进队列），不打开集合。
+                    if (isNavidromeSongCardRef(card.raw) && isNavidromeSongListType(section)) {
+                        homeActions.playNavidromeSongs(navidrome.songLists[section], card.raw.index);
+                        return;
+                    }
+                    homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(section, card.id, sectionsAsTracks), onOpenGridView);
+                }}
             />
         </>
     );

@@ -148,5 +148,7 @@ export const createLibraryHomeActions = (port: LibraryHomePort): LibraryHomeActi
         openNavidromeCard: (card: LibraryHomeCard, type: NavidromeGridViewCollectionType, open: LibraryHomeOpenCollection) => {
             open(port.describeNavidromeCard(card, type));
         },
+
+        playNavidromeSongs: (songs, index) => port.playNavidromeSongs(songs, index),
     };
 };

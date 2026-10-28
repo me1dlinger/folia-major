@@ -3,6 +3,7 @@ import type { HomeViewTab, LocalLibraryGroup, LocalSong, SongResult } from '../.
 import type { MediaId, ProviderAccountSummary, ProviderCollection, ProviderUser } from '../../../types/onlineMusic';
 import type { NavidromeConfig, SubsonicAlbum, SubsonicArtist, SubsonicPlaylist, SubsonicSong } from '../../../types/navidrome';
 import type { LibraryCollectionDescriptor, NavidromeGridViewCollectionType } from '../collection/collection.contract';
+import type { NavidromeSongListType } from '../collection/navidromeSongLists';
 import type { LibraryDirectoryNode, LibraryDirectorySelectionType, LibraryHiddenScope } from '../directory/directory.contract';
 
 // src/library/core/home/homeModel.contract.ts
@@ -206,6 +207,8 @@ export interface LibraryHomePort {
     subscribeScanProgress(listener: (progress: LibraryHomeScanProgress | null) => void): () => void;
     getPersonalFm(selection?: PersonalFmSelection, providerId?: string): Promise<SongResult[]>;
     playPersonalFm(song: SongResult, queue: SongResult[]): void;
+    /** 从首页的歌曲卡直接播放这首歌（同一分区的歌曲列表按顺序进队列）。 */
+    playNavidromeSongs(songs: SubsonicSong[], index: number): void;
     describeOnlineCollection(collection: Record<string, unknown>, providerId: string): LibraryCollectionDescriptor;
     describeLocalGroup(group: LocalLibraryGroup): LibraryCollectionDescriptor;
     describeNavidromeCard(card: LibraryHomeCard, type: NavidromeGridViewCollectionType): LibraryCollectionDescriptor;
@@ -229,6 +232,8 @@ export interface LibraryHomeActionsController {
     openOnlineCard(card: LibraryHomeCard, providerId: string, open: LibraryHomeOpenCollection): Promise<LibraryHomeActionResult>;
     openLocalGroup(group: LocalLibraryGroup, open: LibraryHomeOpenCollection): void;
     openNavidromeCard(card: LibraryHomeCard, type: NavidromeGridViewCollectionType, open: LibraryHomeOpenCollection): void;
+    /** 播放首页歌曲卡对应的那首歌（当前分区列表按顺序进队列）。 */
+    playNavidromeSongs(songs: SubsonicSong[], index: number): void;
 }
 
 /** 列表右上角的一个动作（本地：导入文件夹、刷新、导入歌单文件；Navidrome：刷新）。 */
@@ -255,6 +260,11 @@ export type LibraryNavidromeHomeData = {
     artists: SubsonicArtist[];
     randomSongs: SubsonicSong[];
     favoriteSongs: SubsonicSong[];
+    /**
+     * 「按单曲列表显示」打开时，「最近加入 / 最近播放 / 最多播放」各自的歌曲（摊平后按固定规则排好、已截断）；
+     * 关闭时三个都空。首页墙上放的就是这些歌的卡片。
+     */
+    songLists: Record<NavidromeSongListType, SubsonicSong[]>;
 };
 
 export type LibraryNavidromeHomeSnapshot = {

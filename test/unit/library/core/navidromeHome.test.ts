@@ -8,6 +8,7 @@ import {
     buildNavidromeSectionCards,
     EMPTY_NAVIDROME_HOME_DATA,
     isNavidromeHomeSection,
+    isNavidromeSongCardRef,
     NAVIDROME_HOME_SECTIONS,
     navidromeSectionEmptyKey,
     navidromeSectionLabelKey,
@@ -20,6 +21,7 @@ import {
     NAVIDROME_ALBUM_PAGE_SIZE,
     type NavidromeHomeLibraryDeps,
 } from '@/library/core/home/navidrome/navidromeHomeLibrary.service';
+import { useNavidromeUiSettingsStore } from '@/stores/useNavidromeUiSettingsStore';
 
 // test/unit/library/core/navidromeHome.test.ts
 // Navidrome 页签（原 NavidromeGrid3DView 与 useNavidromeGridLibrary）：section、卡片（虚拟「随机」「收藏」带
@@ -94,15 +96,30 @@ describe('navidrome home model', () => {
         expect(buildNavidromeSectionCards('recently-added', data, { t, coverArtUrl }).map(card => card.id)).toEqual(['n']);
         expect(buildNavidromeSectionCards('recently-played', data, { t, coverArtUrl }).map(card => card.id)).toEqual(['r']);
         expect(buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }).map(card => card.id)).toEqual(['m']);
-        // 「曲目」是入口，不在墙上放卡（墙是无限平铺的，放占位卡会糊满整墙）。
+        // 「曲目」是纯入口，没有卡片墙。
         expect(buildNavidromeSectionCards('songs', data, { t, coverArtUrl })).toEqual([]);
         expect(buildNavidromeSectionCards('playlists', data, { t, coverArtUrl })).toHaveLength(2);
         expect(buildNavidromeSectionCards('artists', data, { t, coverArtUrl })).toEqual([]);
-        // 打开「按单曲列表显示」后，这三项也成了入口，不在墙上放卡。
-        expect(buildNavidromeSectionCards('recently-added', data, { t, coverArtUrl }, true)).toEqual([]);
-        expect(buildNavidromeSectionCards('recently-played', data, { t, coverArtUrl }, true)).toEqual([]);
-        expect(buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }, true)).toEqual([]);
+        // 「按单曲列表显示」打开、还没有歌曲时：墙上只有最左那张「全部」入口卡（点它进全屏曲目列表）。
+        expect(buildNavidromeSectionCards('recently-added', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['recently-added']);
+        expect(buildNavidromeSectionCards('recently-played', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['recently-played']);
+        expect(buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['most-played']);
         expect(buildNavidromeSectionCards('albums', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['a']);
+    });
+
+    it('puts the songs of the list on the wall after the All entry card', () => {
+        const songs = [songWithCover('s1'), songWithCover('s2')];
+        const data = {
+            ...EMPTY_NAVIDROME_HOME_DATA,
+            songLists: { ...EMPTY_NAVIDROME_HOME_DATA.songLists, 'most-played': songs },
+        };
+        const cards = buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }, true);
+        expect(cards.map(card => card.id)).toEqual(['most-played', 's1', 's2']);
+        // 歌曲卡点它是播放（按 index 认），不是打开集合。
+        expect(cards[0].raw).toBeUndefined();
+        expect(cards[1].raw).toEqual({ kind: 'navidrome-song', index: 0 });
+        expect(isNavidromeSongCardRef(cards[1].raw)).toBe(true);
+        expect(isNavidromeSongCardRef(cards[0].raw)).toBe(false);
     });
 
     it('opening resolves album, artist, track-list, random, favorites and playlist types', () => {
@@ -143,6 +160,7 @@ const createDeps = (patch: Partial<NavidromeHomeLibraryDeps> = {}): NavidromeHom
         return Array.from({ length: Math.max(0, Math.min(size, total - offset)) }, (_, index) => album(`al-${offset + index}`));
     }),
     getPlaylists: vi.fn(async () => [{ id: 'pl', name: 'P', songCount: 1, duration: 1 }]),
+    getAlbum: vi.fn(async () => null),
     getArtists: vi.fn(async () => [{ id: 'ar', name: 'Ar' }]),
     getRandomSongs: vi.fn(async () => [songWithCover('r')]),
     getStarred2: vi.fn(async () => [songWithCover('f')]),
@@ -219,6 +237,26 @@ describe('createNavidromeHomeLibrary', () => {
         first.resolve([{ id: 'old', name: 'Old', songCount: 1, duration: 1 }]);
         await older;
         expect(library.getSnapshot().data.playlists.map(item => item.id)).toEqual(['new']);
+    });
+
+    it('flattens the three lists into songs when the setting asks for song lists', async () => {
+        useNavidromeUiSettingsStore.getState().handleToggleSectionsAsTracks(true);
+        try {
+            const deps = createDeps({
+                getAlbum: vi.fn(async (_config, id) => ({
+                    ...album(id),
+                    song: [{ ...songWithCover(`s-${id}`), title: `S ${id}` }],
+                } as SubsonicAlbum)),
+            });
+            const library = createNavidromeHomeLibrary(deps);
+            await library.load();
+            const { songLists } = library.getSnapshot().data;
+            expect(songLists['recently-added'].map(song => song.id)).toEqual(['s-newest-1']);
+            expect(songLists['recently-played'].map(song => song.id)).toEqual(['s-recent-1']);
+            expect(songLists['most-played'].map(song => song.id)).toEqual(['s-frequent-1']);
+        } finally {
+            useNavidromeUiSettingsStore.getState().handleToggleSectionsAsTracks(false);
+        }
     });
 
     it('a failure keeps the previous data and ends loading', async () => {

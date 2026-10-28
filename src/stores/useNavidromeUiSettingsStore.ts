@@ -108,3 +108,9 @@ export const useNavidromeUiSettingsStore = create<NavidromeUiSettingsState>((set
         },
     };
 });
+
+/** 当前的「单曲列表最多显示」（默认 100、最小 1）；「曲目」（全部曲目）不受它限制。 */
+export const readNavidromeSectionTrackLimit = (): number => {
+    const limit = useNavidromeUiSettingsStore.getState().sectionTrackLimit;
+    return Number.isFinite(limit) && limit >= 1 ? Math.floor(limit) : DEFAULT_SECTION_TRACK_LIMIT;
+};

@@ -1,6 +1,9 @@
 import type { NavidromeConfig, SubsonicAlbum, SubsonicArtist, SubsonicPlaylist, SubsonicSong } from '../../../../types/navidrome';
+import type { NavidromeSongListType } from '../../collection/navidromeSongLists';
+import { compareNavidromeSongListSongs, pickNavidromeSongListAlbums } from '../../collection/navidromeSongLists';
 import type { LibraryNavidromeHomeResource, LibraryNavidromeHomeSnapshot } from '../homeModel.contract';
-import { EMPTY_NAVIDROME_HOME_DATA } from './navidromeHomeModel';
+import { EMPTY_NAVIDROME_HOME_DATA, EMPTY_NAVIDROME_SONG_LISTS } from './navidromeHomeModel';
+import { readNavidromeSectionTrackLimit, useNavidromeUiSettingsStore } from '../../../../stores/useNavidromeUiSettingsStore';
 
 // src/library/core/home/navidrome/navidromeHomeLibrary.service.ts
 // Navidrome 首页概览的读取（原 suites/grid/home/useNavidromeGridLibrary 的请求部分）：字母序专辑按页读完
@@ -19,6 +22,8 @@ export const NAVIDROME_RANDOM_SONG_COUNT = 100;
 export type NavidromeHomeLibraryDeps = {
     getConfig(): NavidromeConfig | null;
     getAlbumList2(config: NavidromeConfig, type: 'alphabeticalByName' | 'newest' | 'recent' | 'frequent' | 'random', size: number, offset?: number): Promise<SubsonicAlbum[]>;
+    /** 读一张专辑的详情（含歌曲）：把「按单曲列表显示」的三个分区摊平成歌曲用。 */
+    getAlbum(config: NavidromeConfig, id: string): Promise<SubsonicAlbum | null>;
     getPlaylists(config: NavidromeConfig): Promise<SubsonicPlaylist[]>;
     getArtists(config: NavidromeConfig): Promise<SubsonicArtist[]>;
     getRandomSongs(config: NavidromeConfig, size: number): Promise<SubsonicSong[]>;
@@ -38,6 +43,25 @@ export const loadAllNavidromeAlbums = async (
         if (pageAlbums.length < NAVIDROME_ALBUM_PAGE_SIZE) break;
     }
     return albums;
+};
+
+/**
+ * 把一个分区摊平成歌曲列表：从服务器给的专辑顺序里挑几张（按专辑的歌曲数累计到「单曲列表最多显示」就停，
+ * 见 pickNavidromeSongListAlbums），读详情后按这个分区的固定规则排序、截断。
+ */
+export const loadNavidromeSongList = async (
+    deps: Pick<NavidromeHomeLibraryDeps, 'getAlbum'>,
+    config: NavidromeConfig,
+    albums: readonly SubsonicAlbum[],
+    type: NavidromeSongListType,
+): Promise<SubsonicSong[]> => {
+    const limit = readNavidromeSectionTrackLimit();
+    const wanted = pickNavidromeSongListAlbums(albums, limit);
+    const details = await Promise.all(wanted.map(album => deps.getAlbum(config, album.id)));
+    return details
+        .flatMap(album => album?.song ?? [])
+        .sort((left, right) => compareNavidromeSongListSongs(type, left, right))
+        .slice(0, limit);
 };
 
 export const createNavidromeHomeLibrary = (deps: NavidromeHomeLibraryDeps): LibraryNavidromeHomeResource => {
@@ -103,10 +127,19 @@ export const createNavidromeHomeLibrary = (deps: NavidromeHomeLibraryDeps): Libr
                 deps.getStarred2(config),
             ]);
             if (!isCurrent()) return;
+            // 「按单曲列表显示」打开时，这三个分区还要各自的歌曲（摊平后按固定规则排好、已截断）。
+            const songLists = useNavidromeUiSettingsStore.getState().sectionsAsTracks
+                ? {
+                    'recently-added': await loadNavidromeSongList(deps, config, recentlyAddedAlbums, 'recently-added'),
+                    'recently-played': await loadNavidromeSongList(deps, config, recentlyPlayedAlbums, 'recently-played'),
+                    'most-played': await loadNavidromeSongList(deps, config, mostPlayedAlbums, 'most-played'),
+                }
+                : EMPTY_NAVIDROME_SONG_LISTS;
+            if (!isCurrent()) return;
             commit({
                 config,
                 isLoading: false,
-                data: { albums, recentlyAddedAlbums, recentlyPlayedAlbums, mostPlayedAlbums, playlists, artists, randomSongs, favoriteSongs },
+                data: { albums, recentlyAddedAlbums, recentlyPlayedAlbums, mostPlayedAlbums, playlists, artists, randomSongs, favoriteSongs, songLists },
             });
         } catch (error) {
             if (!isCurrent()) return;

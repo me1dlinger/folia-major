@@ -7,8 +7,9 @@ import type { GridViewCollectionDescriptor } from '../../../../components/app/ho
 import { useDebouncedFocusSync } from '../../../../hooks/useDebouncedFocusSync';
 import type { LibraryHomeActionsController, LibraryHomeCard, LibraryHomeListState, LibraryNavidromeHomeResource } from '../../../core/home/homeModel.contract';
 import type { LibraryDeclaredActions } from '../../../core/suite/suite.contract';
-import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeTrackListSection, resolveNavidromeCollectionType, type NavidromeHomeSection } from '../../../core/home/navidrome/navidromeHomeModel';
+import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeSongCardRef, isNavidromeTrackListSection, resolveNavidromeCollectionType, type NavidromeHomeSection } from '../../../core/home/navidrome/navidromeHomeModel';
 import { useLibraryHomeNavidrome } from '../../../core/home/navidrome/useLibraryHomeNavidrome';
+import { isNavidromeSongListType } from '../../../core/collection/navidromeSongLists';
 import { useLibraryHomeListRegistration } from '../../../core/home/useLibraryHomeSurfaceRegistration';
 import { useNavidromeUiSettingsStore } from '../../../../stores/useNavidromeUiSettingsStore';
 
@@ -100,8 +101,8 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
         icon: SECTION_ICONS[entry.key],
         active: entry.active,
         onClick: () => {
-            // 曲目列表 section 只作为入口：点一下直接进曲目列表，不在墙上停留（墙是无限平铺的，放占位卡会糊满整墙）。
-            if (isNavidromeTrackListSection(entry.key, sectionsAsTracks)) {
+            // 「曲目」（全部曲目）没有卡片墙，只作为入口：点一下直接进曲目列表。
+            if (isNavidromeTrackListSection(entry.key)) {
                 openTrackListSection(entry.key);
                 return;
             }
@@ -169,6 +170,11 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
             onFocusedIndexChange={setFocusedIndex}
             onSelect={(item) => {
                 const card = item as LibraryHomeCard;
+                // 「按单曲列表显示」时墙上放的是歌曲卡：点它播放这首（同一分区按顺序进队列），不打开集合。
+                if (isNavidromeSongCardRef(card.raw) && isNavidromeSongListType(section)) {
+                    homeActions.playNavidromeSongs(navidrome.songLists[section], card.raw.index);
+                    return;
+                }
                 homeActions.openNavidromeCard(
                     card,
                     resolveNavidromeCollectionType(section, card.id, sectionsAsTracks),

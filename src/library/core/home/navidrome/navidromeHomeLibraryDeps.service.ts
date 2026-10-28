@@ -8,6 +8,7 @@ import type { NavidromeHomeLibraryDeps } from './navidromeHomeLibrary.service';
 export const navidromeHomeLibraryDeps: NavidromeHomeLibraryDeps = {
     getConfig: () => getNavidromeConfig(),
     getAlbumList2: (config, type, size, offset) => navidromeApi.getAlbumList2(config, type, size, offset),
+    getAlbum: (config, id) => navidromeApi.getAlbum(config, id),
     getPlaylists: config => navidromeApi.getPlaylists(config),
     getArtists: config => navidromeApi.getArtists(config),
     // A read the server answered nothing to (null) is an empty list here: the home overview shows what it has.
