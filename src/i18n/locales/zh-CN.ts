@@ -4092,6 +4092,7 @@ export default {
     "cloudDrive": "云盘",
     "cloudDriveDesc": "网易云音乐云盘",
     "qqCloudDriveDesc": "微云音乐网盘",
+    "viewAll": "全部",
   },
   "hifi": {
     "settings": {

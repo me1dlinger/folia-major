@@ -94,6 +94,13 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
             collection => onOpenGridView?.(collection),
         );
     };
+    // 「按单曲列表显示」的三个分区：墙上放的是歌，最左那张「全部」进的是这个分区自己的曲目列表
+    // （与「曲目」进全部歌曲同一个集合页：右下角能点开列表，列表里有播放 / 播放全部（长按随机））。
+    const openSongSectionList = () => {
+        if (!sectionsAsTracks || !isNavidromeSongListType(section)) return false;
+        openTrackListSection(section);
+        return true;
+    };
 
     const tabs: DesktopGrid3DAction[] = navidrome.sections.map(entry => ({
         id: entry.key,
@@ -165,6 +172,7 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
             focusMemoryScope={JSON.stringify(['navidrome', config?.serverUrl, config?.username, section])}
             title={navidrome.title}
             mapButtonLabel={t('home.allAlbums')}
+            onOpenMapButton={openSongSectionList}
             items={navidrome.items}
             focusedIndex={focusedIndex}
             onFocusedIndexChange={setFocusedIndex}

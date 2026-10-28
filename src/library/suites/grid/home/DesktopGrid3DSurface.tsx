@@ -31,6 +31,11 @@ interface DesktopGrid3DSurfaceProps {
     focusMemoryScope?: string;
     title: string;
     mapButtonLabel: string;
+    /**
+     * 最左那张「全部」点击的先问这个：返回 true 表示这次点击由来源自己处理（例如 Navidrome 的歌曲分区开自己的
+     * 曲目列表），返回 false / 不给则照旧开这张墙的地图。
+     */
+    onOpenMapButton?: () => boolean;
     items: Grid3DSliderItem[];
     focusedIndex: number;
     onFocusedIndexChange: (index: number) => void;
@@ -58,6 +63,7 @@ export const DesktopGrid3DSurface: React.FC<DesktopGrid3DSurfaceProps> = ({
     focusMemoryScope,
     title,
     mapButtonLabel,
+    onOpenMapButton,
     items,
     focusedIndex: legacyFocusedIndex,
     onFocusedIndexChange: onLegacyFocusedIndexChange,
@@ -155,7 +161,11 @@ export const DesktopGrid3DSurface: React.FC<DesktopGrid3DSurfaceProps> = ({
                             <GridViewTabs
                                 tabs={tabs}
                                 isDaylight={isDaylight}
-                                onOpenMap={isLoading ? undefined : openGridMap}
+                                onOpenMap={isLoading ? undefined : () => {
+                                    // 来源先看这次「全部」是不是它自己的（Navidrome 的歌曲分区开曲目列表）。
+                                    if (onOpenMapButton?.()) return;
+                                    openGridMap();
+                                }}
                                 mapLabel={mapButtonLabel}
                                 mapIcon={<MapIcon size={13} />}
                                 ponderId={ponderControls}

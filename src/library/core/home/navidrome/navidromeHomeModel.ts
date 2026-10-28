@@ -155,15 +155,16 @@ export const buildNavidromeArtistCards = (
     trackCount: artist.albumCount,
 }));
 
-/** 曲目列表入口那张虚拟卡：点它直接进对应的曲目列表（只有「曲目」用它，见 buildNavidromeSectionCards）。 */
+/** 曲目列表入口那张虚拟卡：点它进对应的曲目列表（「曲目」是全部歌曲；三个歌曲分区最左那张「全部」是各自的列表）。 */
 export const buildNavidromeTrackListCard = (
     section: NavidromeHomeSection,
     { t }: { t: TFunction },
 ): LibraryHomeCard => ({
     id: navidromeTrackListCardId(section),
+    // 「曲目」是全部歌曲；三个歌曲分区里这张卡是「全部」入口（看这个分区的完整列表），标题用「全部」、副标题是分区名。
     name: section === 'songs'
         ? (t('navidrome.allSongs') || 'All Songs')
-        : t(navidromeSectionLabelKey(section)),
+        : (t('navidrome.viewAll') || 'All'),
     type: 'playlist',
     description: t(navidromeSectionLabelKey(section)),
     isVirtual: true,

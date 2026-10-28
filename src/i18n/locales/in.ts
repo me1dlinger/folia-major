@@ -4091,7 +4091,8 @@ export default {
     "restoreServerPresetFailed": "Tidak dapat mengambil preset server. Coba lagi nanti.",
     "cloudDrive": "Cloud Drive",
     "cloudDriveDesc": "NetEase Cloud Music Drive",
-    "qqCloudDriveDesc": "Weiyun Music Drive"
+    "qqCloudDriveDesc": "Weiyun Music Drive",
+    "viewAll": "Semua",
   },
   "hifi": {
     "settings": {
