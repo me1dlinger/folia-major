@@ -1624,11 +1624,12 @@ export const GridView: React.FC<GridViewProps> = ({
     const displayCollection = mutationSnapshot.renamedTo && collection ? { ...collection, name: mutationSnapshot.renamedTo } : collection;
     const infoCollection = collectionDetail ? { ...displayCollection, ...collectionDetail } : displayCollection;
     const coverUrl = infoCollection?.coverUrl || '';
-    // 信息面板的封面：集合自己没有封面时（「全部歌曲」这类合成集合），退一步用当前播放队列第一首的封面；
-    // 队列还空着就用列表第一首的；都没有才显示占位图标。
+    // 信息面板的封面：集合自己没有封面时（「全部歌曲」与「最近加入 / 最近播放 / 最多播放」这类合成集合），
+    // 用这个列表**自己**的第一首的封面——三个分区各自的列表不同，封面也就各不相同；列表还没读出来才退到
+    // 当前播放队列的第一首（那样三张页至少还有个图），都没有才显示占位图标。
     const infoPanelCoverUrl = infoCollection?.coverUrl
-        || getSongCoverUrl(queuedFirstSong)
         || getSongCoverUrl(panelTracks[0])
+        || getSongCoverUrl(queuedFirstSong)
         || '';
     // 只有 tracks 模式下的合集才有切入面板，没有面板时标题不做成可点控件
     const hasCutInPanel = mode === 'tracks' && Boolean(collection);

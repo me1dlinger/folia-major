@@ -4092,7 +4092,6 @@ export default {
     "cloudDrive": "Cloud Drive",
     "cloudDriveDesc": "NetEase Cloud Music Drive",
     "qqCloudDriveDesc": "Weiyun Music Drive",
-    "viewAll": "Semua",
   },
   "hifi": {
     "settings": {

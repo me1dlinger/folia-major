@@ -4092,7 +4092,6 @@ export default {
     "mostPlayed": "Phát nhiều nhất",
     "tracks": "Bài hát",
     "allSongs": "Tất cả bài hát",
-    "viewAll": "Tất cả",
   },
   "hifi": {
     "settings": {
