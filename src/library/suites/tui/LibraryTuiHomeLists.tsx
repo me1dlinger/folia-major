@@ -22,6 +22,7 @@ import { useLibraryHomeLocal, useLocalDirectoryTrees, useLocalHomeBatchConfig } 
 import { useLibraryHomeNavidrome } from '../../core/home/navidrome/useLibraryHomeNavidrome';
 import { useLibraryHomeActions } from '../../core/home/useLibraryHomeActions';
 import { useLibraryHomeListRegistration } from '../../core/home/useLibraryHomeSurfaceRegistration';
+import { useNavidromeUiSettingsStore } from '../../../stores/useNavidromeUiSettingsStore';
 import LibraryTuiDirectory from './LibraryTuiDirectory';
 import LibraryTuiAccountList from './LibraryTuiAccountList';
 import type { LibraryTuiPromptRequest } from './LibraryTuiPrompt';
@@ -295,6 +296,8 @@ export const LibraryTuiNavidromeList: React.FC<LibraryTuiListCommonProps & {
     const { t } = useTranslation();
     const navidrome = useLibraryHomeNavidrome(overview);
     const { config, section, setSection, isLoading } = navidrome;
+    // 「最近加入 / 最近播放 / 最多播放」在设置里可以改成单曲列表入口（见 useNavidromeUiSettingsStore）。
+    const sectionsAsTracks = useNavidromeUiSettingsStore(state => state.sectionsAsTracks);
     const canRefresh = common.declaredActions.actions.includes('home-refresh-navidrome');
     const actions = canRefresh ? navidrome.actions : [];
 
@@ -312,10 +315,10 @@ export const LibraryTuiNavidromeList: React.FC<LibraryTuiListCommonProps & {
         }),
         setSection: id => {
             if (!isNavidromeHomeSection(id)) return false;
-            // 曲目列表 section 只作为入口：点一下直接进曲目列表，不停留在这个 section 上。
-            if (isNavidromeTrackListSection(id)) {
+            // 曲目列表入口只作为入口：点一下直接进曲目列表，不停留在这个 section 上。
+            if (isNavidromeTrackListSection(id, sectionsAsTracks)) {
                 const card = buildNavidromeTrackListCard(id, { t });
-                homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(id, card.id), onOpenGridView);
+                homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(id, card.id, sectionsAsTracks), onOpenGridView);
                 return true;
             }
             setSection(id);
@@ -360,7 +363,7 @@ export const LibraryTuiNavidromeList: React.FC<LibraryTuiListCommonProps & {
                 items={navidrome.items}
                 isLoading={isLoading}
                 emptyMessage={navidrome.emptyMessage}
-                onOpen={card => homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(section, card.id), onOpenGridView)}
+                onOpen={card => homeActions.openNavidromeCard(card, resolveNavidromeCollectionType(section, card.id, sectionsAsTracks), onOpenGridView)}
             />
         </>
     );

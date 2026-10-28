@@ -62,6 +62,7 @@ import { LocalTrackSortDirectionButton, LocalTrackSortMenu } from '../../../../c
 import { TrackSortMenu } from '../../../../components/shared/TrackSortMenu';
 import { useTrackListSortStore } from '../../../core/trackSort/useTrackListSortStore';
 import { sortTracks, shuffleTracks, type TrackSortField } from '../../../../utils/trackSorting';
+import { isNavidromeSongListType } from '../../../core/collection/navidromeSongLists';
 import { useLongPress } from '../../../../hooks/useLongPress';
 import { CustomSelect } from '../../../../components/shared/CustomSelect';
 import { deriveProgressiveLoadingState } from '../shared/progressiveGrid';
@@ -587,7 +588,9 @@ export const GridView: React.FC<GridViewProps> = ({
     ), [localSongsById, localTrackSortDirection, localTrackSortField, supportsLocalTrackSorting]);
     // Navidrome / 在线集合的曲目列表：本地那套排序只管文件夹，这里给一份通用排序（字段 + 方向，跨越 renderer 缓存）。
     // 排序在进 collectionView 之前做，视图的显示顺序、序号与定位索引才一致。
-    const supportsTrackListSorting = mode === 'tracks' && !supportsLocalTrackSorting && tracks.length > 0;
+    // 「最近加入 / 最近播放 / 最多播放」的顺序由服务器端 / 摊平时固定（见 core/collection/navidromeSongLists），不给手动排序。
+    const supportsTrackListSorting = mode === 'tracks' && !supportsLocalTrackSorting && tracks.length > 0
+        && !isNavidromeSongListType(collection?.type);
     const orderedTracks = useMemo(
         () => (supportsTrackListSorting ? sortTracks(tracks, trackSortField, trackSortDirection) : tracks),
         [supportsTrackListSorting, tracks, trackSortField, trackSortDirection],

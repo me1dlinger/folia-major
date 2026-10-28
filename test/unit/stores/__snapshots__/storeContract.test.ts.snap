@@ -105,6 +105,8 @@ exports[`store contract > keeps every localStorage key the stores read or write 
   "navidrome_hidden_sections",
   "navidrome_hide_loaded_notice",
   "navidrome_hide_provider_switcher",
+  "navidrome_section_track_limit",
+  "navidrome_sections_as_tracks",
   "nomand_background_tuning",
   "open_player_on_launch",
   "partita_tuning",

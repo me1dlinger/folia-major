@@ -13,6 +13,7 @@ import { useCollectionActions } from '../../core/collection/mutations/useCollect
 import { useCollectionMutationSnapshot } from '../../core/collection/mutations/useCollectionMutations';
 import { useLocalTrackSortStore } from '../../core/directory/useLocalTrackSortStore';
 import { useTrackListSortStore } from '../../core/trackSort/useTrackListSortStore';
+import { isNavidromeSongListType } from '../../core/collection/navidromeSongLists';
 import { sortTracks, TRACK_SORT_FIELDS, type TrackSortField } from '../../../utils/trackSorting';
 
 // 通用曲目排序字段的文案 key（与 grid 的 TrackSortMenu 同一套）。
@@ -101,7 +102,9 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
     const trackSortDirection = useTrackListSortStore(state => state.direction);
     const setTrackSortField = useTrackListSortStore(state => state.setField);
     const setTrackSortDirection = useTrackListSortStore(state => state.setDirection);
-    const supportsTrackListSorting = !supportsLocalTrackSorting && tracks.length > 0;
+    // 「最近加入 / 最近播放 / 最多播放」的顺序由服务器端 / 摊平时固定，不给手动排序（见 core/collection/navidromeSongLists）。
+    const supportsTrackListSorting = !supportsLocalTrackSorting && tracks.length > 0
+        && !isNavidromeSongListType(collection.type);
     const orderedTracks = useMemo(
         () => (supportsTrackListSorting ? sortTracks(tracks, trackSortField, trackSortDirection) : tracks),
         [supportsTrackListSorting, tracks, trackSortField, trackSortDirection],

@@ -28,12 +28,15 @@ export const NAVIDROME_HOME_SECTIONS: readonly { key: NavidromeHomeSection; labe
 ];
 
 /**
- * 「曲目」section 打开的是「曲目列表」而不是卡片墙：点它直接进集合视图，按歌曲列表渲染，带排序与一键播放全部。
- * 其余 section（含最近加入 / 最近播放 / 最多播放）仍是专辑卡墙——Subsonic 只有专辑级的 newest / recent / frequent。
+ * 这个 section 打开的是「曲目列表」而不是卡片墙：点它直接进集合视图，按歌曲列表渲染，带排序与一键播放全部。
+ * 「曲目」永远是；「最近加入 / 最近播放 / 最多播放」在设置里打开「按单曲列表显示」后（`asTracks`）也是——
+ * Subsonic 只有专辑级的 newest / recent / frequent，打开时把最近的一批专辑摊平成歌曲。
  */
-export const isNavidromeTrackListSection = (section: NavidromeHomeSection): boolean => section === 'songs';
+export const isNavidromeTrackListSection = (section: NavidromeHomeSection, asTracks = false): boolean => (
+    section === 'songs' || (asTracks && (section === 'recently-added' || section === 'recently-played' || section === 'most-played'))
+);
 
-/** 「曲目」入口那张虚拟卡的 id。 */
+/** 曲目列表 section 那张虚拟卡的 id。 */
 export const navidromeTrackListCardId = (section: NavidromeHomeSection): string => (
     section === 'songs' ? NAVIDROME_ALL_SONGS_ID : `${section}`
 );
@@ -77,7 +80,7 @@ export const buildNavidromeAlbumCards = (albums: readonly SubsonicAlbum[], cover
     }))
 );
 
-/** 歌单卡：虚拟的「随机」「收藏」在前（isVirtual），然后是服务器上的歌单（可编辑）。 */
+/** 歌单卡：用户自己的歌单在前（可编辑），然后是虚拟的「收藏」，最后是「随机音乐」。 */
 export const buildNavidromePlaylistCards = (
     data: Pick<LibraryNavidromeHomeData, 'randomSongs' | 'favoriteSongs' | 'playlists'>,
     { t, coverArtUrl }: { t: TFunction; coverArtUrl: NavidromeCoverArtUrl },
@@ -85,24 +88,7 @@ export const buildNavidromePlaylistCards = (
     const randomCover = pickRandomSongCoverUrl(data.randomSongs, coverArtUrl);
     const favoritesCover = pickRandomSongCoverUrl(data.favoriteSongs, coverArtUrl);
     return [
-        {
-            id: NAVIDROME_RANDOM_PLAYLIST_ID,
-            name: t('navidrome.random') || 'Random',
-            coverUrl: randomCover || createCoverPlaceholder(t('navidrome.random') || 'Random', 'playlist'),
-            description: t('navidrome.randomDesc'),
-            trackCount: data.randomSongs.length,
-            type: 'playlist',
-            isVirtual: true,
-        },
-        {
-            id: NAVIDROME_FAVORITES_PLAYLIST_ID,
-            name: t('navidrome.favorites') || 'Favorites',
-            coverUrl: favoritesCover || createCoverPlaceholder(t('navidrome.favorites') || 'Favorites', 'playlist'),
-            description: t('navidrome.favorites'),
-            trackCount: data.favoriteSongs.length,
-            type: 'playlist',
-            isVirtual: true,
-        },
+        // 用户自己的歌单最先。
         ...data.playlists.map(playlist => ({
             id: playlist.id,
             name: playlist.name,
@@ -112,6 +98,26 @@ export const buildNavidromePlaylistCards = (
             editable: true,
             type: 'playlist',
         })),
+        // 然后是「收藏」。
+        {
+            id: NAVIDROME_FAVORITES_PLAYLIST_ID,
+            name: t('navidrome.favorites') || 'Favorites',
+            coverUrl: favoritesCover || createCoverPlaceholder(t('navidrome.favorites') || 'Favorites', 'playlist'),
+            description: t('navidrome.favorites'),
+            trackCount: data.favoriteSongs.length,
+            type: 'playlist',
+            isVirtual: true,
+        },
+        // 最后是「随机音乐」。
+        {
+            id: NAVIDROME_RANDOM_PLAYLIST_ID,
+            name: t('navidrome.random') || 'Random',
+            coverUrl: randomCover || createCoverPlaceholder(t('navidrome.random') || 'Random', 'playlist'),
+            description: t('navidrome.randomDesc'),
+            trackCount: data.randomSongs.length,
+            type: 'playlist',
+            isVirtual: true,
+        },
     ];
 };
 
@@ -129,28 +135,30 @@ export const buildNavidromeArtistCards = (
     trackCount: artist.albumCount,
 }));
 
-/** 「曲目」入口的那张虚拟卡：点它直接进全部曲目列表。 */
+/** 曲目列表入口那张虚拟卡：点它直接进对应的曲目列表。 */
 export const buildNavidromeTrackListCard = (
     section: NavidromeHomeSection,
     { t }: { t: TFunction },
 ): LibraryHomeCard => ({
     id: navidromeTrackListCardId(section),
-    name: t('navidrome.allSongs') || 'All Songs',
+    name: section === 'songs'
+        ? (t('navidrome.allSongs') || 'All Songs')
+        : t(navidromeSectionLabelKey(section)),
     type: 'playlist',
     description: t(navidromeSectionLabelKey(section)),
     isVirtual: true,
 });
 
-/** 某个 section 的卡片。 */
+/** 某个 section 的卡片。`asTracks` 时「最近加入 / 最近播放 / 最多播放」是曲目列表入口，不在墙上放卡。 */
 export const buildNavidromeSectionCards = (
     section: NavidromeHomeSection,
     data: LibraryNavidromeHomeData,
     deps: { t: TFunction; coverArtUrl: NavidromeCoverArtUrl },
+    asTracks = false,
 ): LibraryHomeCard[] => {
+    // 曲目列表入口不在墙上放卡：首页的墙是无限平铺的，放一张占位卡会被铺满整面墙。
+    if (isNavidromeTrackListSection(section, asTracks)) return [];
     switch (section) {
-        // 「曲目」不在墙上放卡：它是「点一下直接进曲目列表」的入口，
-        // 首页的墙是无限平铺的，放一张占位卡会被铺满整面墙。
-        case 'songs': return [];
         case 'albums': return buildNavidromeAlbumCards(data.albums, deps.coverArtUrl);
         case 'recently-added': return buildNavidromeAlbumCards(data.recentlyAddedAlbums, deps.coverArtUrl);
         case 'recently-played': return buildNavidromeAlbumCards(data.recentlyPlayedAlbums, deps.coverArtUrl);
@@ -161,12 +169,17 @@ export const buildNavidromeSectionCards = (
     return [];
 };
 
-/** 打开卡片时的集合类型：「曲目」是曲目集合，专辑类 section 是 album，歌手是 artist，歌单里两个虚拟歌单各有类型。 */
+/**
+ * 打开卡片时的集合类型：「曲目」是曲目集合；`asTracks` 时「最近加入 / 最近播放 / 最多播放」各自的曲目集合，
+ * 否则是 album；歌手是 artist；歌单里两个虚拟歌单各有类型。
+ */
 export const resolveNavidromeCollectionType = (
     section: NavidromeHomeSection,
     cardId: string | number,
+    asTracks = false,
 ): NavidromeGridViewCollectionType => {
     if (section === 'songs') return 'songs';
+    if (asTracks && (section === 'recently-added' || section === 'recently-played' || section === 'most-played')) return section;
     if (section === 'albums' || section === 'recently-added' || section === 'recently-played' || section === 'most-played') return 'album';
     if (section === 'artists') return 'artist';
     if (cardId === NAVIDROME_RANDOM_PLAYLIST_ID) return 'random';

@@ -10,6 +10,7 @@ import type { LibraryDeclaredActions } from '../../../core/suite/suite.contract'
 import { buildNavidromeTrackListCard, isNavidromeHomeSection, isNavidromeTrackListSection, resolveNavidromeCollectionType, type NavidromeHomeSection } from '../../../core/home/navidrome/navidromeHomeModel';
 import { useLibraryHomeNavidrome } from '../../../core/home/navidrome/useLibraryHomeNavidrome';
 import { useLibraryHomeListRegistration } from '../../../core/home/useLibraryHomeSurfaceRegistration';
+import { useNavidromeUiSettingsStore } from '../../../../stores/useNavidromeUiSettingsStore';
 
 // src/library/suites/grid/home/NavidromeGrid3DView.tsx
 // Desktop-only Navidrome Grid3D overview that opens GridView instead of legacy collection views.
@@ -80,13 +81,15 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
         artists: [focusedArtistIndex, setFocusedArtistIndex],
     };
     const [focusedIndex, setFocusedIndex] = focus[section];
+    // 「最近加入 / 最近播放 / 最多播放」在设置里可以改成单曲列表入口（见 useNavidromeUiSettingsStore）。
+    const sectionsAsTracks = useNavidromeUiSettingsStore(state => state.sectionsAsTracks);
 
-    // 曲目列表 section（曲目 / 最近加入 / 最近播放）点一下直接进曲目列表；其余 section 只切换卡片墙。
+    // 曲目列表入口点一下直接进曲目列表；其余 section 只切换卡片墙。
     const openTrackListSection = (key: NavidromeHomeSection) => {
         const card = buildNavidromeTrackListCard(key, { t });
         homeActions.openNavidromeCard(
             card,
-            resolveNavidromeCollectionType(key, card.id),
+            resolveNavidromeCollectionType(key, card.id, sectionsAsTracks),
             collection => onOpenGridView?.(collection),
         );
     };
@@ -98,7 +101,7 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
         active: entry.active,
         onClick: () => {
             // 曲目列表 section 只作为入口：点一下直接进曲目列表，不在墙上停留（墙是无限平铺的，放占位卡会糊满整墙）。
-            if (isNavidromeTrackListSection(entry.key)) {
+            if (isNavidromeTrackListSection(entry.key, sectionsAsTracks)) {
                 openTrackListSection(entry.key);
                 return;
             }
@@ -168,7 +171,7 @@ export const NavidromeGrid3DView: React.FC<NavidromeGrid3DViewProps> = ({
                 const card = item as LibraryHomeCard;
                 homeActions.openNavidromeCard(
                     card,
-                    resolveNavidromeCollectionType(section, card.id),
+                    resolveNavidromeCollectionType(section, card.id, sectionsAsTracks),
                     collection => onOpenGridView?.(collection),
                 );
             }}

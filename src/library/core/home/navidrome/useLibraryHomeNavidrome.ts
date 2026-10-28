@@ -4,6 +4,7 @@ import type { NavidromeConfig } from '../../../../types/navidrome';
 import type { LibraryHomeCard, LibraryHomeListAction, LibraryNavidromeHomeResource } from '../homeModel.contract';
 import {
     buildNavidromeSectionCards,
+    isNavidromeTrackListSection,
     NAVIDROME_HOME_SECTIONS,
     navidromeSectionEmptyKey,
     navidromeSectionLabelKey,
@@ -47,15 +48,21 @@ export const useLibraryHomeNavidrome = (resource: LibraryNavidromeHomeResource):
     const setSection = useNavidromeHomeSectionStore(state => state.setSection);
     // 设置里可以隐藏二级菜单里的若干项（见 useNavidromeUiSettingsStore）。
     const hiddenSections = useNavidromeUiSettingsStore(state => state.hiddenSections);
+    // 「最近加入 / 最近播放 / 最多播放」按单曲列表显示时，这三项也成了「点一下进列表」的入口。
+    const sectionsAsTracks = useNavidromeUiSettingsStore(state => state.sectionsAsTracks);
     const visibleSections = useMemo(() => {
         const hidden = new Set(hiddenSections);
         return NAVIDROME_HOME_SECTIONS.filter(entry => !hidden.has(entry.key));
     }, [hiddenSections]);
-    // 当前停留的 section 被隐藏了（或在设置里刚被隐藏）：落到第一个还显示着的。
+    // 当前停留的 section 被隐藏了，或成了曲目列表入口（不落在墙上）：落到第一个还留着的卡片 section。
     useEffect(() => {
         if (visibleSections.length === 0) return;
-        if (!visibleSections.some(entry => entry.key === section)) setSection(visibleSections[0].key);
-    }, [section, setSection, visibleSections]);
+        const isRestable = (key: NavidromeHomeSection) => !isNavidromeTrackListSection(key, sectionsAsTracks);
+        if (!visibleSections.some(entry => entry.key === section && isRestable(entry.key))) {
+            const fallback = visibleSections.find(entry => isRestable(entry.key));
+            if (fallback) setSection(fallback.key);
+        }
+    }, [section, sectionsAsTracks, setSection, visibleSections]);
 
     // 五个 section 的卡片一起组装、只随数据变（与原先各自 memo 一样）：切 section 不重挑虚拟歌单的随机封面。
     const cardsBySection = useMemo(() => {
@@ -63,10 +70,10 @@ export const useLibraryHomeNavidrome = (resource: LibraryNavidromeHomeResource):
         if (!config) return cards;
         const coverArtUrl = (coverArtId: string, size?: number) => navidromeApi.getCoverArtUrl(config, coverArtId, size);
         for (const entry of NAVIDROME_HOME_SECTIONS) {
-            cards[entry.key] = buildNavidromeSectionCards(entry.key, data, { t, coverArtUrl });
+            cards[entry.key] = buildNavidromeSectionCards(entry.key, data, { t, coverArtUrl }, sectionsAsTracks);
         }
         return cards;
-    }, [config, data, t]);
+    }, [config, data, sectionsAsTracks, t]);
     const items = cardsBySection[section];
 
     const sections = useMemo(() => visibleSections.map(entry => ({

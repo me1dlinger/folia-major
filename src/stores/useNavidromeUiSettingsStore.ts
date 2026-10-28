@@ -11,6 +11,8 @@ import { getStoredBoolean, getStoredString, setStoredBoolean, setStoredString } 
 const HIDE_LOADED_NOTICE_KEY = 'navidrome_hide_loaded_notice';
 const HIDDEN_SECTIONS_KEY = 'navidrome_hidden_sections';
 const HIDE_PROVIDER_SWITCHER_KEY = 'navidrome_hide_provider_switcher';
+const SECTIONS_AS_TRACKS_KEY = 'navidrome_sections_as_tracks';
+const SECTION_TRACK_LIMIT_KEY = 'navidrome_section_track_limit';
 
 const readHiddenSections = (): string[] => {
     const stored = getStoredString(HIDDEN_SECTIONS_KEY, '');
@@ -24,6 +26,13 @@ const readHiddenSections = (): string[] => {
     }
 };
 
+export const DEFAULT_SECTION_TRACK_LIMIT = 100;
+
+const readSectionTrackLimit = (): number => {
+    const stored = Number(getStoredString(SECTION_TRACK_LIMIT_KEY, String(DEFAULT_SECTION_TRACK_LIMIT)));
+    return Number.isFinite(stored) && stored >= 1 ? Math.floor(stored) : DEFAULT_SECTION_TRACK_LIMIT;
+};
+
 export type NavidromeUiSettingsState = {
     /** 不显示「Navidrome 歌曲已加载」这类落歌提示。 */
     hideLoadedNotice: boolean;
@@ -31,8 +40,20 @@ export type NavidromeUiSettingsState = {
     hiddenSections: string[];
     /** 不显示右下角常驻的「切换在线音乐平台」按钮。 */
     hideProviderSwitcher: boolean;
+    /**
+     * 「最近加入 / 最近播放 / 最多播放」按单曲列表显示（Subsonic 只有专辑级的这三种排序，
+     * 打开时把最近的一批专辑摊平成歌曲）。关掉时这三项还是专辑墙。
+     */
+    sectionsAsTracks: boolean;
+    /**
+     * 「最近加入 / 最近播放 / 最多播放」单曲列表最多显示多少首（默认 100，最小 1）。
+     * 「曲目」（全部曲目）不受这个限制。
+     */
+    sectionTrackLimit: number;
     handleToggleHideLoadedNotice: (enabled: boolean) => void;
     handleToggleHideProviderSwitcher: (enabled: boolean) => void;
+    handleToggleSectionsAsTracks: (enabled: boolean) => void;
+    handleSetSectionTrackLimit: (limit: number) => void;
     /** 切换某个二级菜单项的显示。 */
     handleToggleHiddenSection: (sectionKey: string, hidden: boolean) => void;
     /** 一次设置整份隐藏列表（Chips 多选）。 */
@@ -50,9 +71,20 @@ export const useNavidromeUiSettingsStore = create<NavidromeUiSettingsState>((set
         hideLoadedNotice: getStoredBoolean(HIDE_LOADED_NOTICE_KEY, false),
         hiddenSections: readHiddenSections(),
         hideProviderSwitcher: getStoredBoolean(HIDE_PROVIDER_SWITCHER_KEY, false),
+        sectionsAsTracks: getStoredBoolean(SECTIONS_AS_TRACKS_KEY, false),
+        sectionTrackLimit: readSectionTrackLimit(),
         handleToggleHideLoadedNotice: (enabled) => {
             setStoredBoolean(HIDE_LOADED_NOTICE_KEY, enabled);
             set({ hideLoadedNotice: enabled });
+        },
+        handleToggleSectionsAsTracks: (enabled) => {
+            setStoredBoolean(SECTIONS_AS_TRACKS_KEY, enabled);
+            set({ sectionsAsTracks: enabled });
+        },
+        handleSetSectionTrackLimit: (limit) => {
+            const next = Number.isFinite(limit) && limit >= 1 ? Math.floor(limit) : DEFAULT_SECTION_TRACK_LIMIT;
+            setStoredString(SECTION_TRACK_LIMIT_KEY, String(next));
+            set({ sectionTrackLimit: next });
         },
         handleToggleHideProviderSwitcher: (enabled) => {
             setStoredBoolean(HIDE_PROVIDER_SWITCHER_KEY, enabled);
@@ -69,8 +101,10 @@ export const useNavidromeUiSettingsStore = create<NavidromeUiSettingsState>((set
         resetNavidromeUi: () => {
             setStoredBoolean(HIDE_LOADED_NOTICE_KEY, false);
             setStoredBoolean(HIDE_PROVIDER_SWITCHER_KEY, false);
+            setStoredBoolean(SECTIONS_AS_TRACKS_KEY, false);
+            setStoredString(SECTION_TRACK_LIMIT_KEY, String(DEFAULT_SECTION_TRACK_LIMIT));
             setStoredString(HIDDEN_SECTIONS_KEY, JSON.stringify([]));
-            set({ hideLoadedNotice: false, hideProviderSwitcher: false, hiddenSections: [] });
+            set({ hideLoadedNotice: false, hideProviderSwitcher: false, sectionsAsTracks: false, sectionTrackLimit: DEFAULT_SECTION_TRACK_LIMIT, hiddenSections: [] });
         },
     };
 });

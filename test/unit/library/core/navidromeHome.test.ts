@@ -64,17 +64,17 @@ describe('navidrome home model', () => {
         expect(bare.coverUrl).toMatch(/^data:image\/svg\+xml/);
     });
 
-    it('playlist cards put the virtual Random and Favorites first, then editable server playlists', () => {
+    it('playlist cards put the user playlists first, then Favorites, then Random', () => {
         const playlists: SubsonicPlaylist[] = [{ id: 'pl', name: 'Mine', owner: 'me', songCount: 4, duration: 1 }];
         const cards = buildNavidromePlaylistCards({ randomSongs: [songWithCover('r')], favoriteSongs: [], playlists }, { t, coverArtUrl });
         expect(cards.map(card => [card.id, card.type, card.isVirtual ?? false, card.editable ?? false, card.trackCount])).toEqual([
-            ['__navi_random__', 'playlist', true, false, 1],
-            ['__navi_favorites__', 'playlist', true, false, 0],
             ['pl', 'playlist', false, true, 4],
+            ['__navi_favorites__', 'playlist', true, false, 0],
+            ['__navi_random__', 'playlist', true, false, 1],
         ]);
-        expect(cards[0].coverUrl).toBe('cover:c-r@600');
+        expect(cards[0].description).toBe('me');
         expect(cards[1].coverUrl).toMatch(/^data:image\/svg\+xml/);
-        expect(cards[2].description).toBe('me');
+        expect(cards[2].coverUrl).toBe('cover:c-r@600');
     });
 
     it('artist cards fall back to the artist image, then a placeholder', () => {
@@ -98,6 +98,11 @@ describe('navidrome home model', () => {
         expect(buildNavidromeSectionCards('songs', data, { t, coverArtUrl })).toEqual([]);
         expect(buildNavidromeSectionCards('playlists', data, { t, coverArtUrl })).toHaveLength(2);
         expect(buildNavidromeSectionCards('artists', data, { t, coverArtUrl })).toEqual([]);
+        // 打开「按单曲列表显示」后，这三项也成了入口，不在墙上放卡。
+        expect(buildNavidromeSectionCards('recently-added', data, { t, coverArtUrl }, true)).toEqual([]);
+        expect(buildNavidromeSectionCards('recently-played', data, { t, coverArtUrl }, true)).toEqual([]);
+        expect(buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }, true)).toEqual([]);
+        expect(buildNavidromeSectionCards('albums', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['a']);
     });
 
     it('opening resolves album, artist, track-list, random, favorites and playlist types', () => {
@@ -106,6 +111,10 @@ describe('navidrome home model', () => {
         expect(resolveNavidromeCollectionType('recently-added', 'x')).toBe('album');
         expect(resolveNavidromeCollectionType('recently-played', 'x')).toBe('album');
         expect(resolveNavidromeCollectionType('most-played', 'x')).toBe('album');
+        // 「按单曲列表显示」打开时，这三项各是自己的曲目集合。
+        expect(resolveNavidromeCollectionType('recently-added', 'x', true)).toBe('recently-added');
+        expect(resolveNavidromeCollectionType('recently-played', 'x', true)).toBe('recently-played');
+        expect(resolveNavidromeCollectionType('most-played', 'x', true)).toBe('most-played');
         expect(resolveNavidromeCollectionType('artists', 'x')).toBe('artist');
         expect(resolveNavidromeCollectionType('playlists', '__navi_random__')).toBe('random');
         expect(resolveNavidromeCollectionType('playlists', '__navi_favorites__')).toBe('favorites');

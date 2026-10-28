@@ -23,6 +23,7 @@ import { useLibraryHomeLocal, useLocalDirectoryTrees, useLocalHomeBatchConfig } 
 import { useLibraryHomeNavidrome } from '../../core/home/navidrome/useLibraryHomeNavidrome';
 import { useLibraryHomeActions } from '../../core/home/useLibraryHomeActions';
 import { useLibraryHomeListRegistration } from '../../core/home/useLibraryHomeSurfaceRegistration';
+import { useNavidromeUiSettingsStore } from '../../../stores/useNavidromeUiSettingsStore';
 import type { BravaisHomeTool } from './bravaisHomeModels';
 import type { BravaisSeamMenuItem } from './bravaisSeamModels';
 import type { BravaisHomeChrome } from './useBravaisHomeChrome';
@@ -262,6 +263,8 @@ export const BravaisHomeNavidrome: React.FC<BravaisHomeSourceCommonProps & {
     const { t } = useTranslation();
     const navidrome = useLibraryHomeNavidrome(overview);
     const { config, section, setSection, isLoading } = navidrome;
+    // 「最近加入 / 最近播放 / 最多播放」在设置里可以改成单曲列表入口（见 useNavidromeUiSettingsStore）。
+    const sectionsAsTracks = useNavidromeUiSettingsStore(state => state.sectionsAsTracks);
     const canRefresh = common.declaredActions.actions.includes('home-refresh-navidrome');
     const actions = canRefresh ? navidrome.actions : [];
 
@@ -295,15 +298,15 @@ export const BravaisHomeNavidrome: React.FC<BravaisHomeSourceCommonProps & {
     const sections = useMemo(() => navidrome.sections.map(entry => ({ key: entry.key, label: entry.label, active: entry.active })), [navidrome.sections]);
     const onSelectSection = useMemo(() => (key: string) => {
         if (!isNavidromeHomeSection(key)) return;
-        // 曲目列表 section 只作为入口：点一下直接进曲目列表，不在墙上停留。
-        if (isNavidromeTrackListSection(key)) {
+        // 曲目列表入口只作为入口：点一下直接进曲目列表，不在墙上停留。
+        if (isNavidromeTrackListSection(key, sectionsAsTracks)) {
             const { homeActions: actionsController, onOpenGridView: open } = latest.current;
             const card = buildNavidromeTrackListCard(key, { t });
-            actionsController.openNavidromeCard(card, resolveNavidromeCollectionType(key, card.id), open);
+            actionsController.openNavidromeCard(card, resolveNavidromeCollectionType(key, card.id, sectionsAsTracks), open);
             return;
         }
         latest.current.navidrome.setSection(key);
-    }, [t]);
+    }, [sectionsAsTracks, t]);
     const refresh = actions[0];
     const refreshLabel = refresh ? t(refresh.labelKey) || refresh.fallbackLabel || '' : null;
     const hasConfig = Boolean(config);
@@ -316,8 +319,8 @@ export const BravaisHomeNavidrome: React.FC<BravaisHomeSourceCommonProps & {
     }] : []), [hasConfig, isLoading, refreshLabel]);
     const onOpen = useMemo(() => (card: Parameters<LibraryHomeActionsController['openNavidromeCard']>[0]) => {
         const { navidrome: current, homeActions: actionsController, onOpenGridView: open } = latest.current;
-        actionsController.openNavidromeCard(card, resolveNavidromeCollectionType(current.section, card.id), open);
-    }, []);
+        actionsController.openNavidromeCard(card, resolveNavidromeCollectionType(current.section, card.id, sectionsAsTracks), open);
+    }, [sectionsAsTracks]);
     // 直达入口（随机、收藏）在歌单 section 里：不经墙打开时按那张卡自己的 section 定集合类型（与在歌单墙上点它一样）。
     const openShortcut = useMemo(() => (card: Parameters<LibraryHomeActionsController['openNavidromeCard']>[0]) => {
         const { homeActions: actionsController, onOpenGridView: open } = latest.current;

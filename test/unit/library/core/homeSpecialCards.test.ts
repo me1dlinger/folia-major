@@ -59,7 +59,8 @@ describe('home special cards', () => {
 
     it('navidrome: the random and favourites playlists; the same fields mean nothing for another source', () => {
         const cards = buildNavidromeSectionCards('playlists', EMPTY_NAVIDROME_HOME_DATA, { t, coverArtUrl: id => id });
-        expect(cards.map(card => resolveLibraryHomeSpecial(card, 'navidrome'))).toEqual(['navidrome-random', 'navidrome-favorites']);
+        // 用户歌单在前、然后是「收藏」、最后是「随机」（空数据时只剩这两个虚拟歌单）。
+        expect(cards.map(card => resolveLibraryHomeSpecial(card, 'navidrome'))).toEqual(['navidrome-favorites', 'navidrome-random']);
         // 同样是 isVirtual 的歌单：本地来源里是「我喜欢」，Navidrome 来源里按 id 认。
         expect(resolveLibraryHomeSpecial({ id: 'playlist-x', type: 'playlist', isVirtual: true }, 'navidrome')).toBeNull();
         expect(resolveLibraryHomeSpecial(cards[0], 'local')).toBe('local-favorites');

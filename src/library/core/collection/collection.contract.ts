@@ -25,7 +25,13 @@ export type NavidromeGridViewCollectionType =
     | 'random'
     | 'favorites'
     /** 全部曲目（「曲目」入口）：search3 空查询分页读完。 */
-    | 'songs';
+    | 'songs'
+    /** 「最近加入」按单曲列表显示时：最近的专辑摊平成歌曲。 */
+    | 'recently-added'
+    /** 「最近播放」按单曲列表显示时。 */
+    | 'recently-played'
+    /** 「最多播放」按单曲列表显示时。 */
+    | 'most-played';
 
 export interface BaseGridViewCollectionDescriptor {
     source: GridViewCollectionSource;

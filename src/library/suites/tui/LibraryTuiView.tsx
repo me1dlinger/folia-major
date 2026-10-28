@@ -19,6 +19,7 @@ import { useGridCommandFilter } from '../../../hooks/useGridCommandFilter';
 import { useGridSurfaceRegistration } from '../../../hooks/useGridSurfaceRegistration';
 import { useLocalTrackSortStore } from '../../core/directory/useLocalTrackSortStore';
 import { useTrackListSortStore } from '../../core/trackSort/useTrackListSortStore';
+import { isNavidromeSongListType } from '../../core/collection/navidromeSongLists';
 import { sortTracks } from '../../../utils/trackSorting';
 import { colorWithAlpha } from '../../../components/visualizer/colorMix';
 import LibraryTuiHeader from './LibraryTuiHeader';
@@ -87,7 +88,9 @@ const LibraryTuiView: React.FC<LibraryCollectionSurfaceProps> = ({
     // Navidrome / 在线集合：本地那套只管文件夹，这里按通用曲目排序排好再进视图，顺序与网格/墙面一致。
     const trackSortField = useTrackListSortStore(state => state.field);
     const trackSortDirection = useTrackListSortStore(state => state.direction);
-    const supportsTrackListSorting = !supportsLocalTrackSorting && tracks.length > 0;
+    // 「最近加入 / 最近播放 / 最多播放」的顺序由服务器端 / 摊平时固定，不给手动排序（见 core/collection/navidromeSongLists）。
+    const supportsTrackListSorting = !supportsLocalTrackSorting && tracks.length > 0
+        && !isNavidromeSongListType(collection.type);
     const orderedTracks = useMemo(
         () => (supportsTrackListSorting ? sortTracks(tracks, trackSortField, trackSortDirection) : tracks),
         [supportsTrackListSorting, tracks, trackSortField, trackSortDirection],
