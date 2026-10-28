@@ -1,4 +1,5 @@
 import type { SubsonicSong } from '../../../types/navidrome';
+import type { NavidromeSongListType } from './collection.contract';
 
 // src/library/core/collection/navidromeSongLists.ts
 // 「最近加入 / 最近播放 / 最多播放」这三个 Navidrome 集合的判定与固定排序：Subsonic 只有专辑级的
@@ -7,8 +8,9 @@ import type { SubsonicSong } from '../../../types/navidrome';
 // 纯规则放这里：首页概览的读取（core/home/navidrome/navidromeHomeLibrary.service）、集合的曲目读取
 // （core/collection/resource/navidromeCollectionTracks.service）与三套 suite 的集合视图都读它
 // —— suite 不直接依赖 core 的 service（见 docs/CODEMAP.md 的依赖方向）。
+// 类型本身在 collection.contract（契约只许引用契约与 src/types，见 layerBoundaries 测试）。
 
-export type NavidromeSongListType = 'recently-added' | 'recently-played' | 'most-played';
+export type { NavidromeSongListType } from './collection.contract';
 
 export const NAVIDROME_SONG_LIST_TYPES: readonly NavidromeSongListType[] = [
     'recently-added',

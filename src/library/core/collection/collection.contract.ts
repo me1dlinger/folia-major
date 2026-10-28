@@ -18,6 +18,13 @@ export type GridViewCollectionSource = 'online' | 'local' | 'navidrome';
  * 'home' 时网格的反向移形换影可以落回首页那张卡。原定义在 stores/useCollectionNavigationStore（那里仍转出）。
  */
 export type CollectionNavigationOrigin = 'home' | 'search' | 'player';
+
+/**
+ * 「最近加入 / 最近播放 / 最多播放」这三个单向集合：Subsonic 只有专辑级的 newest / recent / frequent。
+ * 按单曲展示时把最近的一批专辑摊平成歌曲，顺序由固定规则决定（见 core/collection/navidromeSongLists）。
+ */
+export type NavidromeSongListType = 'recently-added' | 'recently-played' | 'most-played';
+
 export type NavidromeGridViewCollectionType =
     | 'album'
     | 'playlist'
@@ -26,12 +33,8 @@ export type NavidromeGridViewCollectionType =
     | 'favorites'
     /** 全部曲目（「曲目」入口）：search3 空查询分页读完。 */
     | 'songs'
-    /** 「最近加入」按单曲列表显示时：最近的专辑摊平成歌曲。 */
-    | 'recently-added'
-    /** 「最近播放」按单曲列表显示时。 */
-    | 'recently-played'
-    /** 「最多播放」按单曲列表显示时。 */
-    | 'most-played';
+    /** 「最近加入 / 最近播放 / 最多播放」按单曲列表显示时：最近的专辑摊平成歌曲。 */
+    | NavidromeSongListType;
 
 export interface BaseGridViewCollectionDescriptor {
     source: GridViewCollectionSource;
@@ -69,6 +72,11 @@ export interface LocalGridViewCollectionDescriptor extends BaseGridViewCollectio
     entityId?: string;
     playlistId?: string;
     isVirtual?: boolean;
+    /**
+     * 由集合里的歌推出来的自动封面（宿主在交给集合层的描述上写；没有时为 null）。设了自定义集合封面时 coverUrl 是那张，
+     * 这里仍是自动的：画曲目本身（专辑墙）的地方用它，集合封面不影响集合里的歌。没写（undefined）时就是 coverUrl。
+     */
+    automaticCoverUrl?: string | null;
 }
 
 export interface NavidromeGridViewCollectionDescriptor extends BaseGridViewCollectionDescriptor {

@@ -2,8 +2,7 @@ import type { PersonalFmSelection } from '../../../types/personalFm';
 import type { HomeViewTab, LocalLibraryGroup, LocalSong, SongResult } from '../../../types';
 import type { MediaId, ProviderAccountSummary, ProviderCollection, ProviderUser } from '../../../types/onlineMusic';
 import type { NavidromeConfig, SubsonicAlbum, SubsonicArtist, SubsonicPlaylist, SubsonicSong } from '../../../types/navidrome';
-import type { LibraryCollectionDescriptor, NavidromeGridViewCollectionType } from '../collection/collection.contract';
-import type { NavidromeSongListType } from '../collection/navidromeSongLists';
+import type { LibraryCollectionDescriptor, NavidromeGridViewCollectionType, NavidromeSongListType } from '../collection/collection.contract';
 import type { LibraryDirectoryNode, LibraryDirectorySelectionType, LibraryHiddenScope } from '../directory/directory.contract';
 
 // src/library/core/home/homeModel.contract.ts
