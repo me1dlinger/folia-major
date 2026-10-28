@@ -155,24 +155,23 @@ export const buildNavidromeArtistCards = (
     trackCount: artist.albumCount,
 }));
 
-/** 曲目列表入口那张虚拟卡：点它直接进对应的曲目列表。 */
+/** 曲目列表入口那张虚拟卡：点它直接进对应的曲目列表（只有「曲目」用它，见 buildNavidromeSectionCards）。 */
 export const buildNavidromeTrackListCard = (
     section: NavidromeHomeSection,
     { t }: { t: TFunction },
 ): LibraryHomeCard => ({
     id: navidromeTrackListCardId(section),
-    // 「曲目」是全部歌曲；三个歌曲级分区里这张卡排在卡片条最左，是「全部」入口（看这个分区的完整列表）。
     name: section === 'songs'
         ? (t('navidrome.allSongs') || 'All Songs')
-        : (t('navidrome.viewAll') || 'All'),
+        : t(navidromeSectionLabelKey(section)),
     type: 'playlist',
     description: t(navidromeSectionLabelKey(section)),
     isVirtual: true,
 });
 
 /**
- * 某个 section 的卡片。`asTracks` 时「最近加入 / 最近播放 / 最多播放」放的是歌曲卡，最左先放一张「全部」入口卡
- * （点它进这个分区自己的全屏曲目列表）；「曲目」没有卡片墙。
+ * 某个 section 的卡片。`asTracks` 时「最近加入 / 最近播放 / 最多播放」放的是歌曲卡（点一张即播这首）；
+ * 要「到全部」（这个分区的全屏列表 / 地图）用页签行最左那张「全部」，「曲目」没有卡片墙。
  */
 export const buildNavidromeSectionCards = (
     section: NavidromeHomeSection,
@@ -182,12 +181,9 @@ export const buildNavidromeSectionCards = (
 ): LibraryHomeCard[] => {
     // 「曲目」是纯入口（点它直接进全部曲目），没有卡片墙。
     if (section === 'songs') return [];
-    // 「按单曲列表显示」：歌曲卡，最左是「全部」入口卡。
+    // 「按单曲列表显示」：这三个分区墙上放的是歌，不再另放「全部」卡（页签行最左那张「全部」就是入口）。
     if (asTracks && isNavidromeSongListType(section)) {
-        return [
-            buildNavidromeTrackListCard(section, deps),
-            ...buildNavidromeSongCards(data.songLists[section], deps.coverArtUrl),
-        ];
+        return buildNavidromeSongCards(data.songLists[section], deps.coverArtUrl);
     }
     switch (section) {
         case 'albums': return buildNavidromeAlbumCards(data.albums, deps.coverArtUrl);

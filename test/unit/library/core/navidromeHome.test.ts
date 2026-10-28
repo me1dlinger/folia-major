@@ -100,26 +100,26 @@ describe('navidrome home model', () => {
         expect(buildNavidromeSectionCards('songs', data, { t, coverArtUrl })).toEqual([]);
         expect(buildNavidromeSectionCards('playlists', data, { t, coverArtUrl })).toHaveLength(2);
         expect(buildNavidromeSectionCards('artists', data, { t, coverArtUrl })).toEqual([]);
-        // 「按单曲列表显示」打开、还没有歌曲时：墙上只有最左那张「全部」入口卡（点它进全屏曲目列表）。
-        expect(buildNavidromeSectionCards('recently-added', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['recently-added']);
-        expect(buildNavidromeSectionCards('recently-played', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['recently-played']);
-        expect(buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['most-played']);
+        // 「按单曲列表显示」打开、还没有歌曲时：墙上没有卡（「到全部」是页签行最左那张地图入口，不在墙上）。
+        expect(buildNavidromeSectionCards('recently-added', data, { t, coverArtUrl }, true)).toEqual([]);
+        expect(buildNavidromeSectionCards('recently-played', data, { t, coverArtUrl }, true)).toEqual([]);
+        expect(buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }, true)).toEqual([]);
         expect(buildNavidromeSectionCards('albums', data, { t, coverArtUrl }, true).map(card => card.id)).toEqual(['a']);
     });
 
-    it('puts the songs of the list on the wall after the All entry card', () => {
+    it('puts the songs of the list on the wall, each card carrying its own index', () => {
         const songs = [songWithCover('s1'), songWithCover('s2')];
         const data = {
             ...EMPTY_NAVIDROME_HOME_DATA,
             songLists: { ...EMPTY_NAVIDROME_HOME_DATA.songLists, 'most-played': songs },
         };
         const cards = buildNavidromeSectionCards('most-played', data, { t, coverArtUrl }, true);
-        expect(cards.map(card => card.id)).toEqual(['most-played', 's1', 's2']);
+        expect(cards.map(card => card.id)).toEqual(['s1', 's2']);
         // 歌曲卡点它是播放（按 index 认），不是打开集合。
-        expect(cards[0].raw).toBeUndefined();
-        expect(cards[1].raw).toEqual({ kind: 'navidrome-song', index: 0 });
-        expect(isNavidromeSongCardRef(cards[1].raw)).toBe(true);
-        expect(isNavidromeSongCardRef(cards[0].raw)).toBe(false);
+        expect(cards[0].raw).toEqual({ kind: 'navidrome-song', index: 0 });
+        expect(cards[1].raw).toEqual({ kind: 'navidrome-song', index: 1 });
+        expect(isNavidromeSongCardRef(cards[0].raw)).toBe(true);
+        expect(isNavidromeSongCardRef({ kind: 'navidrome-song' })).toBe(false);
     });
 
     it('opening resolves album, artist, track-list, random, favorites and playlist types', () => {
